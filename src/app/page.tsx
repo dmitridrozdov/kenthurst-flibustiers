@@ -31,7 +31,9 @@ export default async function HomePage() {
   const raw = await fs.readFile(filePath, 'utf-8')
   const data: MatchData = JSON.parse(raw)
 
-  const ratings = calculateRatings(data.players, data.matches)
+  const allRatings = calculateRatings(data.players, data.matches)
+  const ratings = allRatings.filter(r => r.gamesPlayed > 0)
+  const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
 
   const thisMonth = data.matches.filter((m) => {
     const d = new Date(m.date)
@@ -125,6 +127,39 @@ export default async function HomePage() {
                 </div>
               )
             })}
+
+            {unstarted.length > 0 && (
+            <>
+              <h3 style={{ marginTop: '2rem', marginBottom: '1rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
+                Yet to play
+              </h3>
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <span className={styles.panelLabel}>Player</span>
+                  <span className={styles.panelLabel}>Starting Rating</span>
+                </div>
+                {unstarted.map((r) => {
+                  const av = avatarColor(r.name)
+                  return (
+                    <div key={r.name} className={styles.playerRow}>
+                      <div className={styles.rank}>—</div>
+                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
+                        {initials(r.name)}
+                      </div>
+                      <div className={styles.playerInfo}>
+                        <div className={styles.playerName}>{r.name}</div>
+                        <div className={styles.playerMeta}>No matches played yet</div>
+                      </div>
+                      <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                        <div className={styles.ratingScore} style={{ color: 'var(--text3)' }}>1200</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
           </div>
 
           {/* EXPLAINER */}
