@@ -14,7 +14,7 @@ export default function OpenPage() {
             <h1 className={styles.title}>
               Kenthurst <span>Open</span>
             </h1>
-            <div className={styles.heroDate}>Est. 2025 · Annual Championship</div>
+            <div className={styles.heroDate}>Est. 2026 · Annual Championship</div>
             <div className={styles.pill}>Coming Soon</div>
             <p className={styles.desc}>
               The inaugural Kenthurst Flibustiers Open — our first official club championship.
@@ -23,7 +23,7 @@ export default function OpenPage() {
             </p>
           </div>
 
-          <Countdown targetDate="2025-11-08" />
+          <Countdown targetDate="2026-11-08" />
 
           {/* Info grid */}
           <div className={styles.grid}>
@@ -56,7 +56,7 @@ export default function OpenPage() {
         </div>
       </main>
       <footer className={styles.footer}>
-        © 2025 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
+        © 2026 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
       </footer>
     </>
   )
