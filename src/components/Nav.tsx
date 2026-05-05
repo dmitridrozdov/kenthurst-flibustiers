@@ -17,7 +17,7 @@ export default function Nav() {
     <nav className={styles.nav}>
       <div className={styles.logo}>
         The Kenthurst Flibustiers
-        <span>Est. 2024 · Tennis Club</span>
+        <span>Est. 2026 · Tennis Club</span>
       </div>
       <div className={styles.links}>
         {links.map((l) => (
