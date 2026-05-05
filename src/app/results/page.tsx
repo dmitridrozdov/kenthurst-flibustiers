@@ -44,9 +44,18 @@ export default async function ResultsPage() {
                     <div className={styles.meta}>Doubles · {m.surface}</div>
                   </div>
                   <div className={styles.score}>
-                    {m.score.split(',').map((s, i) => (
-                      <span key={i}>{i > 0 ? ', ' : ''}{i === 0 ? <b>{s.trim()}</b> : s.trim()}</span>
-                    ))}
+                    {m.score.split(',').map((s, i) => {
+                      const parts = s.trim().split('-')
+                      const wScore = parseInt(parts[0])
+                      const lScore = parseInt(parts[1])
+                      const winnerLeads = !isNaN(wScore) && !isNaN(lScore) && wScore > lScore
+                      return (
+                        <span key={i}>
+                          {i > 0 ? ', ' : ''}
+                          {winnerLeads ? <b>{s.trim()}</b> : s.trim()}
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
