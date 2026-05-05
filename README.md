@@ -13,7 +13,7 @@ After a session, open `data/matches.json` and add a new entry to the `matches` a
 ```json
 {
   "id": "m007",
-  "date": "2025-05-10",
+  "date": "2026-05-10",
   "winner": "Alex Carter",
   "partner1": "Jamie Brooks",
   "loser": "Morgan Lee",
