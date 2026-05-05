@@ -25,7 +25,7 @@ export default async function ResultsPage() {
         <div className={styles.section}>
           <div className={styles.header}>
             <h1 className={styles.title}>Match Results</h1>
-            <span className={styles.badge}>2025 Season</span>
+            <span className={styles.badge}>2026 Season</span>
           </div>
 
           {sorted.length === 0 ? (
@@ -55,7 +55,7 @@ export default async function ResultsPage() {
         </div>
       </main>
       <footer className={styles.footer}>
-        © 2025 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
+        © 2026 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
       </footer>
     </>
   )
