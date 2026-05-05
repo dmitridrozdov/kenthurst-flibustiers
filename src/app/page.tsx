@@ -157,7 +157,7 @@ Team Rating  = average of both partners' individual doubles ratings`}</pre>
         </div>
       </main>
       <footer className={styles.footer}>
-        © 2025 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
+        © 2026 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
       </footer>
     </>
   )
