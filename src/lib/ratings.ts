@@ -26,6 +26,30 @@ function expectedScore(ratingA: number, ratingB: number): number {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400))
 }
 
+function parseSetScore(score: string): { winnerGames: number; loserGames: number } {
+  let winnerGames = 0
+  let loserGames = 0
+  const sets = score.split(',').map(s => s.trim())
+  for (const set of sets) {
+    // strip tiebreak annotations like "7-6(4)"
+    const clean = set.replace(/\(\d+\)/g, '')
+    const parts = clean.split('-').map(n => parseInt(n))
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      winnerGames += parts[0]
+      loserGames += parts[1]
+    }
+  }
+  return { winnerGames, loserGames }
+}
+
+function dominanceMultiplier(winnerGames: number, loserGames: number): number {
+  const total = winnerGames + loserGames
+  if (total === 0) return 1.0
+  // ranges from 1.0 (even) to 1.5 (total bagel)
+  return 0.5 + winnerGames / total
+}
+
+
 export function calculateRatings(players: string[], matches: Match[]): PlayerRating[] {
   // initialise state for each player
   const ratings: Record<string, number> = {}
@@ -60,7 +84,35 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
 
     const teamAAvg = (ratings[winner] + ratings[partner1]) / 2
     const teamBAvg = (ratings[loser] + ratings[partner2]) / 2
+  //   const expected = expectedScore(teamAAvg, teamBAvg)
+
+  //   // snapshot ratings just before the last match for "change" display
+  //   if (idx === sorted.length - 2) {
+  //     Object.assign(prevRatings, ratings)
+  //   }
+
+  //   ;[winner, partner1].forEach((p) => {
+  //     const mult = activityMultiplier(recentGames[p])
+  //     const K = kFactor(gamesPlayed[p])
+  //     const delta = Math.round(K * mult * (1 - expected))
+  //     ratings[p] += delta
+  //     gamesPlayed[p]++
+  //     if (isRecent) recentGames[p]++
+  //   })
+
+  //   ;[loser, partner2].forEach((p) => {
+  //     const mult = activityMultiplier(recentGames[p])
+  //     const K = kFactor(gamesPlayed[p])
+  //     const delta = Math.round(K * mult * (0 - expected))
+  //     ratings[p] += delta
+  //     gamesPlayed[p]++
+  //     if (isRecent) recentGames[p]++
+  //   })
+  // })
+
     const expected = expectedScore(teamAAvg, teamBAvg)
+    const { winnerGames, loserGames } = parseSetScore(match.score)
+    const domMult = dominanceMultiplier(winnerGames, loserGames)
 
     // snapshot ratings just before the last match for "change" display
     if (idx === sorted.length - 2) {
@@ -70,7 +122,7 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
     ;[winner, partner1].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * mult * (1 - expected))
+      const delta = Math.round(K * mult * domMult * (1 - expected))
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
@@ -79,13 +131,13 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
     ;[loser, partner2].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * mult * (0 - expected))
+      const delta = Math.round(K * mult * domMult * (0 - expected))
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
     })
   })
-
+  
   return players
     .filter((p) => p in ratings)
     .map((p) => ({
@@ -98,3 +150,4 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
     }))
     .sort((a, b) => b.rating - a.rating)
 }
+
