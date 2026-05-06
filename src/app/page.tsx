@@ -170,10 +170,12 @@ export default async function HomePage() {
               consistently. Your partner&apos;s rating and your own recent activity both influence
               how fast you gain points.
             </p>
-            <pre className={styles.formula}>{`New Rating  = OldRating + K × ActivityMult × (Result − Expected)
-Expected    = 1 / (1 + 10^((TeamB_avg − TeamA_avg) / 400))
+            <pre className={styles.formula}>{`New Rating   = OldRating + K × ActivityMult × DomMult × (Result − Expected)
+Expected     = 1 / (1 + 10^((TeamB_avg − TeamA_avg) / 400))
 ActivityMult = 1.0 + min(0.30, matchesLast60Days × 0.03)
+DomMult      = 0.5 + (winnerGames / totalGames)  →  range: 1.0 – 1.5
 Team Rating  = average of both partners' individual doubles ratings`}</pre>
+
             <div className={styles.factorsGrid}>
               <div className={styles.factorCard}>
                 <div className={styles.factorName}>K-Factor</div>
@@ -184,10 +186,15 @@ Team Rating  = average of both partners' individual doubles ratings`}</pre>
                 <div className={styles.factorDesc}>+3% per match in last 60 days, capped at +30%. Regulars move faster.</div>
               </div>
               <div className={styles.factorCard}>
+                <div className={styles.factorName}>Dominance Multiplier</div>
+                <div className={styles.factorDesc}>Scales points by set margin. 6-0, 6-0 gives ×1.5 — a 7-6, 6-7, 7-6 war gives ×1.04. Closer to ×1.5 the more dominant the win.</div>
+              </div>
+              <div className={styles.factorCard}>
                 <div className={styles.factorName}>Doubles Split</div>
                 <div className={styles.factorDesc}>Each partner gains/loses individually. Team average determines the expected result.</div>
               </div>
             </div>
+
           </div>
         </div>
       </main>
