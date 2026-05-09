@@ -195,10 +195,10 @@ export default async function HomePage() {
                       {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange} pts
                     </div>
                   </div>
-                  <div className={styles.multCol}>
+                  {/* <div className={styles.multCol}>
                     <span className={styles.multBadge}>×{r.activityMultiplier.toFixed(2)}</span>
                     <span className={styles.gamesCol}>{r.gamesPlayed}</span>
-                  </div>
+                  </div> */}
                 </div>
               )
             })}
