@@ -26,6 +26,70 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[h]
 }
 
+function buildHistory(player: string, matches: MatchData['matches']) {
+  const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
+  const result: { win: boolean; pts: number }[] = []
+
+  // replay ELO to get per-match deltas — simplified, no cross-dependency needed
+  const ratings: Record<string, number> = {}
+  const recentGames: Record<string, number> = {}
+  const gamesPlayed: Record<string, number> = {}
+
+  for (const m of sorted) {
+    const all = [m.winner, m.partner1, m.loser, m.partner2]
+    all.forEach((p) => {
+      if (!(p in ratings)) { ratings[p] = 1200; recentGames[p] = 0; gamesPlayed[p] = 0 }
+    })
+
+    const domMult = (() => {
+      let wg = 0, lg = 0
+      for (const s of m.score.split(',')) {
+        const parts = s.trim().replace(/\(\d+\)/g, '').split('-').map(Number)
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { wg += parts[0]; lg += parts[1] }
+      }
+      const total = wg + lg
+      return total === 0 ? 1 : 0.5 + wg / total
+    })()
+
+    const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
+    const teamBAvg = (ratings[m.loser]  + ratings[m.partner2]) / 2
+    const expected = 1 / (1 + Math.pow(10, (teamBAvg - teamAAvg) / 400))
+
+    const involves = (p: string) => [m.winner, m.partner1, m.loser, m.partner2].includes(p)
+    const isWinner = (p: string) => [m.winner, m.partner1].includes(p)
+
+    if (involves(player)) {
+      const win = isWinner(player)
+      const mult = 1 + Math.min(0.30, recentGames[player] * 0.03)
+      const K = gamesPlayed[player] >= 20 ? 24 : 32
+      const pts = win
+        ? Math.round(K * mult * domMult * (1 - expected))
+        : Math.round(K * (1 / mult) * domMult * (0 - expected))
+      result.push({ win, pts: Math.abs(pts) })
+    }
+
+    ;[m.winner, m.partner1].forEach((p) => {
+      const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
+      const K = gamesPlayed[p] >= 20 ? 24 : 32
+      const domM = domMult
+      ratings[p] += Math.round(K * mult * domM * (1 - expected))
+      gamesPlayed[p]++
+      const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
+      if (days <= 60) recentGames[p]++
+    })
+    ;[m.loser, m.partner2].forEach((p) => {
+      const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
+      const K = gamesPlayed[p] >= 20 ? 24 : 32
+      ratings[p] += Math.round(K * (1 / mult) * domMult * (0 - expected))
+      gamesPlayed[p]++
+      const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
+      if (days <= 60) recentGames[p]++
+    })
+  }
+
+  return result.slice(-10)
+}
+
 export default async function HomePage() {
   const filePath = path.join(process.cwd(), 'data', 'matches.json')
   const raw = await fs.readFile(filePath, 'utf-8')
@@ -33,6 +97,8 @@ export default async function HomePage() {
 
   const allRatings = calculateRatings(data.players, data.matches)
   const ratings = allRatings.filter(r => r.gamesPlayed > 0)
+  const history: Record<string, { win: boolean; pts: number }[]> = {}
+  data.players.forEach((p) => { history[p] = buildHistory(p, data.matches) })
   const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
 
   const thisMonth = data.matches.filter((m) => {
@@ -109,10 +175,19 @@ export default async function HomePage() {
                   </div>
                   <div className={styles.playerInfo}>
                     <div className={styles.playerName}>{r.name}</div>
-                    <div className={styles.playerMeta}>
-                      <span className={styles.actDot} style={{ background: actLevel }} />
-                      {r.gamesPlayed} matches · {r.recentGames} recent
-                    </div>
+                    {history[r.name] && history[r.name].length > 0 && (
+                      <div className={styles.historyStrip}>
+                        {history[r.name].map((h, i) => (
+                          <div
+                            key={i}
+                            className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}
+                            title={`${h.win ? '+' : '-'}${h.pts} pts`}
+                          >
+                            {h.win ? '+' : '-'}{h.pts}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
                     <div className={styles.ratingScore}>{r.rating}</div>
@@ -172,7 +247,7 @@ export default async function HomePage() {
             </p>
             <pre className={styles.formula}>{`New Rating   = OldRating + K × ActivityMult × DomMult × (Result − Expected)
 Expected     = 1 / (1 + 10^((TeamB_avg − TeamA_avg) / 400))
-ActivityMult = 1.0 + min(0.30, matchesLast60Days × 0.03)
+ActivityMult = 1.0 + min(0.30, matchesLast60Days × 0.03)  → ×mult on wins, ×(1/mult) on losses
 DomMult      = 0.5 + (winnerGames / totalGames)  →  range: 1.0 – 1.5
 Team Rating  = average of both partners' individual doubles ratings`}</pre>
 
@@ -183,7 +258,7 @@ Team Rating  = average of both partners' individual doubles ratings`}</pre>
               </div>
               <div className={styles.factorCard}>
                 <div className={styles.factorName}>Activity Bonus</div>
-                <div className={styles.factorDesc}>+3% per match in last 60 days, capped at +30%. Regulars move faster.</div>
+                <div className={styles.factorDesc}>+3% per match in last 60 days, capped at +30%. Boosts wins and softens losses — the more you play, the more the ladder rewards you.</div>
               </div>
               <div className={styles.factorCard}>
                 <div className={styles.factorName}>Dominance Multiplier</div>
