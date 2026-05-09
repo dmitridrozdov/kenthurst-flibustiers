@@ -119,10 +119,10 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
       Object.assign(prevRatings, ratings)
     }
 
-    ;[winner, partner1].forEach((p) => {
+   ;[winner, partner1].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * mult * domMult * (1 - expected))
+      const delta = Math.round(K * mult * domMult * (1 - expected))  // mult > 1, boosts win
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
@@ -131,7 +131,7 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
     ;[loser, partner2].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * mult * domMult * (0 - expected))
+      const delta = Math.round(K * (1 / mult) * domMult * (0 - expected))  // 1/mult < 1, softens loss
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
