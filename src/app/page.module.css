@@ -144,6 +144,7 @@
   padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--border);
   transition: background 0.15s;
+  flex-wrap: wrap;
 }
 
 .playerRow:last-child {
@@ -337,4 +338,38 @@
 @media (max-width: 640px) {
   .heroStats { gap: 1.5rem; }
   .factorsGrid { grid-template-columns: 1fr; }
+}
+
+.historyStrip {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-top: 5px;
+  overflow-x: auto;
+}
+
+.histBox {
+  font-size: 0.58rem;
+  font-weight: 700;
+  width: 30px;
+  height: 24px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.histWin {
+  background: rgba(107, 189, 94, 0.18);
+  color: var(--green-light);
+  border: 1px solid rgba(107, 189, 94, 0.35);
+}
+
+.histLoss {
+  background: rgba(200, 90, 58, 0.18);
+  color: var(--red);
+  border: 1px solid rgba(200, 90, 58, 0.35);
 }
