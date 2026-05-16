@@ -177,7 +177,7 @@ export default async function HomePage() {
                     <div className={styles.playerName}>{r.name}</div>
                     {history[r.name] && history[r.name].length > 0 && (
                       <div className={styles.historyStrip}>
-                        {history[r.name].map((h, i) => (
+                        {[...history[r.name]].reverse().map((h, i) => (
                           <div
                             key={i}
                             className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}
