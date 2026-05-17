@@ -12,6 +12,10 @@ const ubuntu = Ubuntu({
 export const metadata: Metadata = {
   title: 'The Kenthurst Flibustiers',
   description: 'Kenthurst Tennis Club — Doubles Rankings & Results',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
