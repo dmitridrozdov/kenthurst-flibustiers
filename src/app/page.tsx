@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { MatchData } from '@/lib/types'
-import { calculateRatings } from '@/lib/ratings'
+import { calculateRatings, calculateRatingsPure } from '@/lib/ratings'
 import Nav from '@/components/Nav'
 import styles from './page.module.css'
 
@@ -96,6 +96,7 @@ export default async function HomePage() {
   const data: MatchData = JSON.parse(raw)
 
   const allRatings = calculateRatings(data.players, data.matches)
+  // const allRatings = calculateRatingsPure(data.players, data.matches)
   const ratings = allRatings.filter(r => r.gamesPlayed > 0)
   const history: Record<string, { win: boolean; pts: number }[]> = {}
   data.players.forEach((p) => { history[p] = buildHistory(p, data.matches) })
