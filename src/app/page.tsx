@@ -28,9 +28,8 @@ function avatarColor(name: string) {
 
 function buildHistory(player: string, matches: MatchData['matches']) {
   const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
-  const result: { win: boolean; pts: number }[] = []
+  const history: { win: boolean; pts: number }[] = []
 
-  // replay ELO to get per-match deltas — simplified, no cross-dependency needed
   const ratings: Record<string, number> = {}
   const recentGames: Record<string, number> = {}
   const gamesPlayed: Record<string, number> = {}
@@ -41,53 +40,59 @@ function buildHistory(player: string, matches: MatchData['matches']) {
       if (!(p in ratings)) { ratings[p] = 1200; recentGames[p] = 0; gamesPlayed[p] = 0 }
     })
 
-    const domMult = (() => {
-      let wg = 0, lg = 0
-      for (const s of m.score.split(',')) {
-        const parts = s.trim().replace(/\(\d+\)/g, '').split('-').map(Number)
-        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { wg += parts[0]; lg += parts[1] }
-      }
-      const total = wg + lg
-      return total === 0 ? 1 : 0.5 + wg / total
-    })()
+    let wg = 0, lg = 0
+    for (const s of m.score.split(',')) {
+      const parts = s.trim().replace(/\(\d+\)/g, '').replace(/\s*draw\s*/gi, '').split('-').map(Number)
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { wg += parts[0]; lg += parts[1] }
+    }
+    const total = wg + lg
+    const domMult = total === 0 ? 1 : 0.5 + wg / total
+    const isDraw = m.score.toLowerCase().includes('draw') || wg === lg
+    const effectiveDomMult = isDraw ? 1.0 : domMult
 
     const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
     const teamBAvg = (ratings[m.loser]  + ratings[m.partner2]) / 2
     const expected = 1 / (1 + Math.pow(10, (teamBAvg - teamAAvg) / 400))
 
-    const involves = (p: string) => [m.winner, m.partner1, m.loser, m.partner2].includes(p)
+    const involves = (p: string) => all.includes(p)
     const isWinner = (p: string) => [m.winner, m.partner1].includes(p)
 
     if (involves(player)) {
       const win = isWinner(player)
       const mult = 1 + Math.min(0.30, recentGames[player] * 0.03)
       const K = gamesPlayed[player] >= 20 ? 24 : 32
-      const pts = win
-        ? Math.round(K * mult * domMult * (1 - expected))
-        : Math.round(K * (1 / mult) * domMult * (0 - expected))
-      result.push({ win, pts: Math.abs(pts) })
+      const resultVal = isDraw ? 0.5 : (win ? 1 : 0)
+      const actFactor = isDraw ? 1 : (win ? mult : 1 / mult)
+      const playerExpected = win ? expected : 1 - expected
+      const pts = Math.round(K * actFactor * effectiveDomMult * (resultVal - playerExpected))
+      history.push({ win: isDraw ? true : win, pts: Math.abs(pts) })
     }
 
     ;[m.winner, m.partner1].forEach((p) => {
       const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
       const K = gamesPlayed[p] >= 20 ? 24 : 32
-      const domM = domMult
-      ratings[p] += Math.round(K * mult * domM * (1 - expected))
+      const actFactor = isDraw ? 1 : mult
+      const resultVal = isDraw ? 0.5 : 1
+      ratings[p] += Math.round(K * actFactor * effectiveDomMult * (resultVal - expected))
       gamesPlayed[p]++
       const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
       if (days <= 60) recentGames[p]++
     })
+
     ;[m.loser, m.partner2].forEach((p) => {
       const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
       const K = gamesPlayed[p] >= 20 ? 24 : 32
-      ratings[p] += Math.round(K * (1 / mult) * domMult * (0 - expected))
+      const actFactor = isDraw ? 1 : (1 / mult)
+      const resultVal = isDraw ? 0.5 : 0
+      const loserExpected = 1 - expected
+      ratings[p] += Math.round(K * actFactor * effectiveDomMult * (resultVal - loserExpected))
       gamesPlayed[p]++
       const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
       if (days <= 60) recentGames[p]++
     })
   }
 
-  return result.slice(-10)
+  return history.slice(-10)
 }
 
 export default async function HomePage() {
