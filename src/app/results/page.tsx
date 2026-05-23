@@ -30,7 +30,7 @@ export default async function ResultsPage() {
         </div>
       </main>
       <footer className={styles.footer}>
-        © 2025 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
+        © 2026 <em>The Kenthurst Flibustiers</em> · Kenthurst, NSW · Play hard, play fair
       </footer>
     </>
   )
