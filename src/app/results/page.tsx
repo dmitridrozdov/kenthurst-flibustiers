@@ -11,6 +11,17 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function parseSets(score: string, winnerPerspective: boolean) {
+  return score.split(',').map((s) => {
+    const clean = s.trim().replace(/\(\d+\)/g, '').replace(/\s*draw\s*/gi, '')
+    const parts = clean.split('-').map(Number)
+    if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return null
+    const [w, l] = parts
+    const iWin = winnerPerspective ? w > l : l > w
+    return { top: winnerPerspective ? w : l, bot: winnerPerspective ? l : w, topWin: w > l, botWin: l > w }
+  }).filter(Boolean)
+}
+
 export default async function ResultsPage() {
   const filePath = path.join(process.cwd(), 'data', 'matches.json')
   const raw = await fs.readFile(filePath, 'utf-8')
@@ -36,24 +47,23 @@ export default async function ResultsPage() {
                 <div key={m.id} className={styles.card}>
                   <div className={styles.date}>{formatDate(m.date)}</div>
                   <div className={styles.match}>
-                    <div className={styles.teams}>
-                      <span className={styles.winner}>{m.winner} / {m.partner1}</span>
-                      <span className={styles.vs}>def.</span>
-                      <span className={styles.loser}>{m.loser} / {m.partner2}</span>
-                    </div>
-                    <div className={styles.meta}>Doubles · {m.surface}</div>
+                    <div className={styles.winner}>{m.winner} / {m.partner1}</div>
+                    <div className={styles.loser}>{m.loser} / {m.partner2}</div>
                   </div>
                   <div className={styles.score}>
                     {m.score.split(',').map((s, i) => {
-                      const parts = s.trim().split('-')
-                      const wScore = parseInt(parts[0])
-                      const lScore = parseInt(parts[1])
-                      const winnerLeads = !isNaN(wScore) && !isNaN(lScore) && wScore > lScore
+                      const clean = s.trim().replace(/\(\d+\)/g, '').replace(/\s*draw\s*/gi, '')
+                      const parts = clean.split('-').map(Number)
+                      if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return null
+                      const [w, l] = parts
                       return (
-                        <span key={i}>
-                          {i > 0 ? ', ' : ''}
-                          {winnerLeads ? <b>{s.trim()}</b> : s.trim()}
-                        </span>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          {i > 0 && <div className={styles.setDivider} />}
+                          <div className={styles.setBox}>
+                            <div className={`${styles.setNum} ${w > l ? styles.setWin : styles.setLose}`}>{w}</div>
+                            <div className={`${styles.setNum} ${l > w ? styles.setWin : styles.setLose}`}>{l}</div>
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
