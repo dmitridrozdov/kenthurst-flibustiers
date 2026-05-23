@@ -185,10 +185,32 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
       Object.assign(prevRatings, ratings)
     }
 
-   ;[winner, partner1].forEach((p) => {
+    const isDraw = match.score.toLowerCase().includes('draw') || winnerGames === loserGames
+    const effectiveDomMult = isDraw ? 1.0 : domMult
+
+
+    if (isDraw) {
+      console.log('=== DRAW DEBUG ===')
+      console.log('score:', match.score)
+      console.log('isDraw:', isDraw)
+      console.log('effectiveDomMult:', effectiveDomMult)
+      console.log('teamAAvg (winner):', teamAAvg)
+      console.log('teamBAvg (loser):', teamBAvg)
+      console.log('expected (for winner team):', expected)
+      console.log('loserExpected (1-expected):', 1 - expected)
+      console.log('winner result:', 0.5, '→ delta sign:', 0.5 - expected)
+      console.log('loser result:', 0.5, '→ delta sign:', 0.5 - (1 - expected))
+      console.log('K winner:', kFactor(gamesPlayed[winner]))
+      console.log('mult winner:', activityMultiplier(recentGames[winner]))
+      console.log('actual delta winner:', Math.round(32 * 1 * 1 * (0.5 - expected)))
+    }
+
+    ;[winner, partner1].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * mult * domMult * (1 - expected))  // mult > 1, boosts win
+      const result = isDraw ? 0.5 : 1
+      const actFactor = isDraw ? 1 : mult
+      const delta = Math.round(K * actFactor * effectiveDomMult * (result - expected))
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
@@ -197,7 +219,10 @@ export function calculateRatings(players: string[], matches: Match[]): PlayerRat
     ;[loser, partner2].forEach((p) => {
       const mult = activityMultiplier(recentGames[p])
       const K = kFactor(gamesPlayed[p])
-      const delta = Math.round(K * (1 / mult) * domMult * (0 - expected))  // 1/mult < 1, softens loss
+      const result = isDraw ? 0.5 : 0
+      const actFactor = isDraw ? 1 : (1 / mult)
+      const loserExpected = 1 - expected
+      const delta = Math.round(K * actFactor * effectiveDomMult * (result - loserExpected))
       ratings[p] += delta
       gamesPlayed[p]++
       if (isRecent) recentGames[p]++
