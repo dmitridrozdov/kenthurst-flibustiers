@@ -74,43 +74,59 @@
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--gold2);
-}
-
-.vs {
-  font-size: 0.7rem;
-  color: var(--text3);
-  font-weight: 300;
+  margin-bottom: 4px;
 }
 
 .loser {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 400;
   color: var(--text2);
 }
 
-.meta {
-  font-size: 0.65rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-top: 4px;
-}
-
 .score {
-  font-size: 0.85rem;
-  font-weight: 500;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  padding: 4px 12px;
-  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
 }
 
-.score b {
-  color: var(--gold);
+.setBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 28px;
+}
+
+.setNum {
+  font-size: 0.85rem;
   font-weight: 700;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  width: 28px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.setNum.setWin {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: var(--gold);
+  color: var(--gold2);
+}
+
+.setNum.setLose {
+  color: var(--text3);
+  border-color: var(--border);
+}
+
+.setDivider {
+  width: 1px;
+  height: 52px;
+  background: var(--border2);
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .empty {
