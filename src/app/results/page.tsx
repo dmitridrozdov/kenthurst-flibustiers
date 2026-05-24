@@ -24,7 +24,7 @@ export default async function ResultsPage() {
         <div className={styles.section}>
           <div className={styles.header}>
             <h1 className={styles.title}>Match Results</h1>
-            <span className={styles.badge}>2025 Season</span>
+            <span className={styles.badge}>2026 Season</span>
           </div>
           <ResultsList latest={latest} previous={previous} />
         </div>
