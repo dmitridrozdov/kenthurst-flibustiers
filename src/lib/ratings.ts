@@ -31,8 +31,7 @@ function parseSetScore(score: string): { winnerGames: number; loserGames: number
   let loserGames = 0
   const sets = score.split(',').map(s => s.trim())
   for (const set of sets) {
-    // strip tiebreak annotations like "7-6(4)"
-    const clean = set.replace(/\(\d+\)/g, '')
+    const clean = set.replace(/\(\d+\)/g, '').replace(/\s*draw\s*/gi, '')
     const parts = clean.split('-').map(n => parseInt(n))
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
       winnerGames += parts[0]
@@ -45,11 +44,10 @@ function parseSetScore(score: string): { winnerGames: number; loserGames: number
 function dominanceMultiplier(winnerGames: number, loserGames: number): number {
   const total = winnerGames + loserGames
   if (total === 0) return 1.0
-  // ranges from 1.0 (even) to 1.5 (total bagel)
   return 0.5 + winnerGames / total
 }
 
-export function calculateRatingsPure(players: string[], matches: Match[]): PlayerRating[] {
+export function calculateRatings(players: string[], matches: Match[]): PlayerRating[] {
   const ratings: Record<string, number> = {}
   const gamesPlayed: Record<string, number> = {}
   const recentGames: Record<string, number> = {}
@@ -61,6 +59,7 @@ export function calculateRatingsPure(players: string[], matches: Match[]): Playe
   })
 
   const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
+  const latestDate = sorted[sorted.length - 1]?.date ?? ''
   const prevRatings: Record<string, number> = { ...ratings }
 
   sorted.forEach((match, idx) => {
@@ -77,17 +76,93 @@ export function calculateRatingsPure(players: string[], matches: Match[]): Playe
     const isRecent = daysBetween(date) <= ACTIVITY_WINDOW_DAYS
 
     const teamAAvg = (ratings[winner] + ratings[partner1]) / 2
+    const teamBAvg = (ratings[loser] + ratings[partner2]) / 2
+    const expected = expectedScore(teamAAvg, teamBAvg)
+    const { winnerGames, loserGames } = parseSetScore(match.score)
+    const domMult = dominanceMultiplier(winnerGames, loserGames)
+    const isDraw = match.score.toLowerCase().includes('draw') || winnerGames === loserGames
+    const effectiveDomMult = isDraw ? 1.0 : domMult
+
+    // snapshot just before the first match of the latest date
+    if (match.date === latestDate && sorted[idx - 1]?.date !== latestDate) {
+      Object.assign(prevRatings, ratings)
+    }
+
+    ;[winner, partner1].forEach((p) => {
+      const mult = activityMultiplier(recentGames[p])
+      const K = kFactor(gamesPlayed[p])
+      const result = isDraw ? 0.5 : 1
+      const actFactor = isDraw ? 1 : mult
+      const delta = Math.round(K * actFactor * effectiveDomMult * (result - expected))
+      ratings[p] += delta
+      gamesPlayed[p]++
+      if (isRecent) recentGames[p]++
+    })
+
+    ;[loser, partner2].forEach((p) => {
+      const mult = activityMultiplier(recentGames[p])
+      const K = kFactor(gamesPlayed[p])
+      const result = isDraw ? 0.5 : 0
+      const actFactor = isDraw ? 1 : (1 / mult)
+      const loserExpected = 1 - expected
+      const delta = Math.round(K * actFactor * effectiveDomMult * (result - loserExpected))
+      ratings[p] += delta
+      gamesPlayed[p]++
+      if (isRecent) recentGames[p]++
+    })
+  })
+
+  return players
+    .filter((p) => p in ratings)
+    .map((p) => ({
+      name: p,
+      rating: ratings[p],
+      gamesPlayed: gamesPlayed[p],
+      recentGames: recentGames[p],
+      activityMultiplier: activityMultiplier(recentGames[p]),
+      ratingChange: ratings[p] - prevRatings[p],
+    }))
+    .sort((a, b) => b.rating - a.rating)
+}
+
+export function calculateRatingsPure(players: string[], matches: Match[]): PlayerRating[] {
+  const ratings: Record<string, number> = {}
+  const gamesPlayed: Record<string, number> = {}
+  const recentGames: Record<string, number> = {}
+
+  players.forEach((p) => {
+    ratings[p] = STARTING_RATING
+    gamesPlayed[p] = 0
+    recentGames[p] = 0
+  })
+
+  const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
+  const latestDate = sorted[sorted.length - 1]?.date ?? ''
+  const prevRatings: Record<string, number> = { ...ratings }
+
+  sorted.forEach((match, idx) => {
+    const { winner, partner1, loser, partner2, date } = match
+
+    ;[winner, partner1, loser, partner2].forEach((p) => {
+      if (!(p in ratings)) {
+        ratings[p] = STARTING_RATING
+        gamesPlayed[p] = 0
+        recentGames[p] = 0
+      }
+    })
+
+    const isRecent = daysBetween(date) <= ACTIVITY_WINDOW_DAYS
+    const teamAAvg = (ratings[winner] + ratings[partner1]) / 2
     const teamBAvg = (ratings[loser]  + ratings[partner2]) / 2
     const expected = expectedScore(teamAAvg, teamBAvg)
     const { winnerGames, loserGames } = parseSetScore(match.score)
     const domMult = dominanceMultiplier(winnerGames, loserGames)
 
-    if (idx === sorted.length - 2) {
+    // snapshot just before the first match of the latest date
+    if (match.date === latestDate && sorted[idx - 1]?.date !== latestDate) {
       Object.assign(prevRatings, ratings)
     }
 
-    // pure ELO: only K and dominance, no activity asymmetry
-    // the surprise factor (result - expected) does all the heavy lifting
     ;[winner, partner1].forEach((p) => {
       const K = kFactor(gamesPlayed[p])
       ratings[p] += Math.round(K * domMult * (1 - expected))
@@ -115,130 +190,3 @@ export function calculateRatingsPure(players: string[], matches: Match[]): Playe
     }))
     .sort((a, b) => b.rating - a.rating)
 }
-
-export function calculateRatings(players: string[], matches: Match[]): PlayerRating[] {
-  // initialise state for each player
-  const ratings: Record<string, number> = {}
-  const gamesPlayed: Record<string, number> = {}
-  const recentGames: Record<string, number> = {}
-
-  players.forEach((p) => {
-    ratings[p] = STARTING_RATING
-    gamesPlayed[p] = 0
-    recentGames[p] = 0
-  })
-
-  // sort matches chronologically
-  const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
-
-  // track previous ratings for change display (snapshot before last match)
-  const prevRatings: Record<string, number> = { ...ratings }
-
-  sorted.forEach((match, idx) => {
-    const { winner, partner1, loser, partner2, date } = match
-
-    // ensure any player appearing in matches but not in players list is initialised
-    ;[winner, partner1, loser, partner2].forEach((p) => {
-      if (!(p in ratings)) {
-        ratings[p] = STARTING_RATING
-        gamesPlayed[p] = 0
-        recentGames[p] = 0
-      }
-    })
-
-    const isRecent = daysBetween(date) <= ACTIVITY_WINDOW_DAYS
-
-    const teamAAvg = (ratings[winner] + ratings[partner1]) / 2
-    const teamBAvg = (ratings[loser] + ratings[partner2]) / 2
-  //   const expected = expectedScore(teamAAvg, teamBAvg)
-
-  //   // snapshot ratings just before the last match for "change" display
-  //   if (idx === sorted.length - 2) {
-  //     Object.assign(prevRatings, ratings)
-  //   }
-
-  //   ;[winner, partner1].forEach((p) => {
-  //     const mult = activityMultiplier(recentGames[p])
-  //     const K = kFactor(gamesPlayed[p])
-  //     const delta = Math.round(K * mult * (1 - expected))
-  //     ratings[p] += delta
-  //     gamesPlayed[p]++
-  //     if (isRecent) recentGames[p]++
-  //   })
-
-  //   ;[loser, partner2].forEach((p) => {
-  //     const mult = activityMultiplier(recentGames[p])
-  //     const K = kFactor(gamesPlayed[p])
-  //     const delta = Math.round(K * mult * (0 - expected))
-  //     ratings[p] += delta
-  //     gamesPlayed[p]++
-  //     if (isRecent) recentGames[p]++
-  //   })
-  // })
-
-    const expected = expectedScore(teamAAvg, teamBAvg)
-    const { winnerGames, loserGames } = parseSetScore(match.score)
-    const domMult = dominanceMultiplier(winnerGames, loserGames)
-
-    // snapshot ratings just before the last match for "change" display
-    if (idx === sorted.length - 2) {
-      Object.assign(prevRatings, ratings)
-    }
-
-    const isDraw = match.score.toLowerCase().includes('draw') || winnerGames === loserGames
-    const effectiveDomMult = isDraw ? 1.0 : domMult
-
-
-    if (isDraw) {
-      console.log('=== DRAW DEBUG ===')
-      console.log('score:', match.score)
-      console.log('isDraw:', isDraw)
-      console.log('effectiveDomMult:', effectiveDomMult)
-      console.log('teamAAvg (winner):', teamAAvg)
-      console.log('teamBAvg (loser):', teamBAvg)
-      console.log('expected (for winner team):', expected)
-      console.log('loserExpected (1-expected):', 1 - expected)
-      console.log('winner result:', 0.5, '→ delta sign:', 0.5 - expected)
-      console.log('loser result:', 0.5, '→ delta sign:', 0.5 - (1 - expected))
-      console.log('K winner:', kFactor(gamesPlayed[winner]))
-      console.log('mult winner:', activityMultiplier(recentGames[winner]))
-      console.log('actual delta winner:', Math.round(32 * 1 * 1 * (0.5 - expected)))
-    }
-
-    ;[winner, partner1].forEach((p) => {
-      const mult = activityMultiplier(recentGames[p])
-      const K = kFactor(gamesPlayed[p])
-      const result = isDraw ? 0.5 : 1
-      const actFactor = isDraw ? 1 : mult
-      const delta = Math.round(K * actFactor * effectiveDomMult * (result - expected))
-      ratings[p] += delta
-      gamesPlayed[p]++
-      if (isRecent) recentGames[p]++
-    })
-
-    ;[loser, partner2].forEach((p) => {
-      const mult = activityMultiplier(recentGames[p])
-      const K = kFactor(gamesPlayed[p])
-      const result = isDraw ? 0.5 : 0
-      const actFactor = isDraw ? 1 : (1 / mult)
-      const loserExpected = 1 - expected
-      const delta = Math.round(K * actFactor * effectiveDomMult * (result - loserExpected))
-      ratings[p] += delta
-      gamesPlayed[p]++
-      if (isRecent) recentGames[p]++
-    })
-  })
-  
-  return players
-    .filter((p) => p in ratings)
-    .map((p) => ({
-      name: p,
-      rating: ratings[p],
-      gamesPlayed: gamesPlayed[p],
-      recentGames: recentGames[p],
-      activityMultiplier: activityMultiplier(recentGames[p]),
-      ratingChange: ratings[p] - prevRatings[p],
-    }))
-    .sort((a, b) => b.rating - a.rating)
-}
-
