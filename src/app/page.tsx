@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { MatchData } from '@/lib/types'
-import { calculateRatings, calculateRatingsPure } from '@/lib/ratings'
+import { calculateRatings } from '@/lib/ratings'
 import Nav from '@/components/Nav'
 import styles from './page.module.css'
 
@@ -101,11 +101,16 @@ export default async function HomePage() {
   const data: MatchData = JSON.parse(raw)
 
   const allRatings = calculateRatings(data.players, data.matches)
-  // const allRatings = calculateRatingsPure(data.players, data.matches)
-  const ratings = allRatings.filter(r => r.gamesPlayed > 0)
+  const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed))
+  const threshold = maxGames * 0.5
+
+  const ratings = allRatings.filter(r => r.gamesPlayed >= threshold)
+  const provisional = allRatings.filter(r => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
+  const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
+
   const history: Record<string, { win: boolean; pts: number }[]> = {}
   data.players.forEach((p) => { history[p] = buildHistory(p, data.matches) })
-  const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
+ 
 
   const thisMonth = data.matches.filter((m) => {
     const d = new Date(m.date)
@@ -163,7 +168,7 @@ export default async function HomePage() {
             <div className={styles.panelHeader}>
               <span className={styles.panelLabel}>Player · Doubles Rating</span>
               <span className={styles.panelLabel} style={{ display: 'flex', gap: '1.5rem' }}>
-                <span>Act. Mult</span>
+                {/* <span>Act. Mult</span> */}
                 <span>Games</span>
               </span>
             </div>
@@ -208,6 +213,58 @@ export default async function HomePage() {
                 </div>
               )
             })}
+
+
+            {provisional.length > 0 && (
+            <>
+              <h3 style={{ marginTop: '2rem', marginBottom: '1rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
+                Provisional
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: '1rem', marginLeft: '2rem',fontWeight: 300 }}>
+                Fewer than {Math.ceil(threshold)} games played — not yet ranked
+              </p>
+              <div className={styles.panel}>
+                <div className={styles.panelHeader}>
+                  <span className={styles.panelLabel}>Player · Rating</span>
+                  <span className={styles.panelLabel}>Games</span>
+                </div>
+                {provisional.map((r) => {
+                  const av = avatarColor(r.name)
+                  const actLevel = r.recentGames >= 6 ? '#6bbd5e' : r.recentGames >= 3 ? '#c9a84c' : '#847e70'
+                  return (
+                    <div key={r.name} className={styles.playerRow}>
+                      <div className={styles.rank}>—</div>
+                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
+                        {initials(r.name)}
+                      </div>
+                      <div className={styles.playerInfo}>
+                        <div className={styles.playerName}>{r.name}</div>
+                        {history[r.name] && history[r.name].length > 0 && (
+                          <div className={styles.historyStrip}>
+                            {[...history[r.name]].reverse().map((h, i) => (
+                              <div key={i} className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}>
+                                {h.win ? '+' : '-'}{h.pts}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                        <div className={styles.ratingScore} style={{ color: 'var(--text2)' }}>{r.rating}</div>
+                        <div className={`${styles.ratingChange} ${r.ratingChange >= 0 ? styles.pos : styles.neg}`}>
+                          {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange} pts
+                        </div>
+                      </div>
+                      {/* <div className={styles.multCol}>
+                        <span className={styles.gamesCol}>{r.gamesPlayed}</span>
+                      </div> */}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
 
             {unstarted.length > 0 && (
             <>
