@@ -22,13 +22,12 @@
     ),
     repeating-linear-gradient(
       170deg,
-      rgba(30,60,25,0.9),
-      rgba(22,48,18,0.9) 18px,
-      rgba(28,56,22,0.9) 18px,
-      rgba(28,56,22,0.9) 36px
+      rgba(14, 30, 60, 0.95),
+      rgba(10, 22, 48, 0.95) 18px,
+      rgba(12, 26, 54, 0.95) 18px,
+      rgba(12, 26, 54, 0.95) 36px
     );
 }
-
 .court {
   position: absolute;
   inset: 0;
@@ -391,7 +390,7 @@
 }
 
 .histLoss {
-  background: rgba(200, 90, 58, 0.18);
-  color: var(--red);
-  border: 1px solid rgba(200, 90, 58, 0.35);
+  background: rgba(255, 107, 74, 0.18);
+  color: #ff6b4a;
+  border: 1px solid rgba(255, 107, 74, 0.4);
 }
