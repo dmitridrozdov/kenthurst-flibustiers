@@ -7,6 +7,7 @@ import styles from './Nav.module.css'
 const links = [
   { href: '/', label: 'Rankings' },
   { href: '/results', label: 'Results' },
+  { href: '/record', label: 'Record' },
   { href: '/open', label: 'Kenthurst Open', badge: 'Soon' },
 ]
 
