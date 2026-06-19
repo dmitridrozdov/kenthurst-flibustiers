@@ -6,6 +6,8 @@ import { api } from '../../../convex/_generated/api'
 import Nav from '@/components/Nav'
 import styles from './record.module.css'
 
+import PlayerSelect from '@/components/PlayerSelect'
+
 export default function RecordPage() {
   const players = useQuery(api.players.list)
   const addMatch = useMutation(api.matches.add)
@@ -72,24 +74,36 @@ export default function RecordPage() {
             />
 
             <div className={styles.teamHeader}>Winners</div>
-            <select className={styles.input} value={winner} onChange={(e) => setWinner(e.target.value)}>
-              <option value="">Player A</option>
-              {players.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select className={styles.input} value={partner1} onChange={(e) => setPartner1(e.target.value)}>
-              <option value="">Player B</option>
-              {players.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <PlayerSelect
+              players={players}
+              value={winner}
+              onChange={setWinner}
+              placeholder="Player A"
+              exclude={[partner1, loser, partner2].filter(Boolean)}
+            />
+            <PlayerSelect
+              players={players}
+              value={partner1}
+              onChange={setPartner1}
+              placeholder="Player B"
+              exclude={[winner, loser, partner2].filter(Boolean)}
+            />
 
             <div className={styles.teamHeader}>Losers</div>
-            <select className={styles.input} value={loser} onChange={(e) => setLoser(e.target.value)}>
-              <option value="">Player A</option>
-              {players.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select className={styles.input} value={partner2} onChange={(e) => setPartner2(e.target.value)}>
-              <option value="">Player B</option>
-              {players.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <PlayerSelect
+              players={players}
+              value={loser}
+              onChange={setLoser}
+              placeholder="Player A"
+              exclude={[winner, partner1, partner2].filter(Boolean)}
+            />
+            <PlayerSelect
+              players={players}
+              value={partner2}
+              onChange={setPartner2}
+              placeholder="Player B"
+              exclude={[winner, partner1, loser].filter(Boolean)}
+            />
 
             <label className={styles.label}>Score (e.g. 6-3, 6-4)</label>
             <input
