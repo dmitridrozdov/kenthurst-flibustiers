@@ -50,7 +50,20 @@
   font-size: 1rem;
   font-family: inherit;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.input[type="date"] {
+  min-width: 0;
+}
+
+.input::-webkit-calendar-picker-indicator {
+  margin-left: 4px;
+  filter: invert(0.7);
 }
 
 .input:focus {
