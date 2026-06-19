@@ -1,5 +1,8 @@
+import { Id } from '../../convex/_generated/dataModel'
+
 export interface Match {
-  id: string
+  _id?: Id<"matches">
+  id?: string
   date: string
   winner: string
   partner1: string
