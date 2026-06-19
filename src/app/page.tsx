@@ -1,11 +1,11 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import { MatchData } from '@/lib/types'
+'use client'
+
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { calculateRatings } from '@/lib/ratings'
+import { Match } from '@/lib/types'
 import Nav from '@/components/Nav'
 import styles from './page.module.css'
-
-export const revalidate = 0
 
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
@@ -26,7 +26,7 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[h]
 }
 
-function buildHistory(player: string, matches: MatchData['matches']) {
+function buildHistory(player: string, matches: Match[]) {
   const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date))
   const history: { win: boolean; pts: number }[] = []
 
@@ -95,12 +95,20 @@ function buildHistory(player: string, matches: MatchData['matches']) {
   return history.slice(-10)
 }
 
-export default async function HomePage() {
-  const filePath = path.join(process.cwd(), 'data', 'matches.json')
-  const raw = await fs.readFile(filePath, 'utf-8')
-  const data: MatchData = JSON.parse(raw)
+export default function HomePage() {
+  const players = useQuery(api.players.list)
+  const matches = useQuery(api.matches.list)
 
-  const allRatings = calculateRatings(data.players, data.matches)
+  if (players === undefined || matches === undefined) {
+    return (
+      <>
+        <Nav />
+        <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
+      </>
+    )
+  }
+
+  const allRatings = calculateRatings(players, matches)
   const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed))
   const threshold = maxGames * 0.5
 
@@ -109,10 +117,10 @@ export default async function HomePage() {
   const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
 
   const history: Record<string, { win: boolean; pts: number }[]> = {}
-  data.players.forEach((p) => { history[p] = buildHistory(p, data.matches) })
+  players.forEach((p) => { history[p] = buildHistory(p, matches) })
  
 
-  const thisMonth = data.matches.filter((m) => {
+  const thisMonth = matches.filter((m) => {
     const d = new Date(m.date)
     const now = new Date()
     return now.getTime() - d.getTime() < 30 * 24 * 3600 * 1000
@@ -143,11 +151,11 @@ export default async function HomePage() {
           </p>
           <div className={styles.heroStats}>
             <div>
-              <div className={styles.statNum}>{data.players.length}</div>
+              <div className={styles.statNum}>{players.length}</div>
               <div className={styles.statLbl}>Players</div>
             </div>
             <div>
-              <div className={styles.statNum}>{data.matches.length}</div>
+              <div className={styles.statNum}>{matches.length}</div>
               <div className={styles.statLbl}>Matches</div>
             </div>
             <div>
