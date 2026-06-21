@@ -3,17 +3,26 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { calculateRatings } from '@/lib/ratings'
 import Nav from '@/components/Nav'
+import PlayerSelect from '@/components/PlayerSelect'
 import styles from './record.module.css'
 
-import PlayerSelect from '@/components/PlayerSelect'
-
 export default function RecordPage() {
-  const players = useQuery(api.players.list)
+  const playersRaw = useQuery(api.players.list)
+  const matches = useQuery(api.matches.list)
   const addMatch = useMutation(api.matches.add)
   const addPlayer = useMutation(api.players.add)
 
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => {
+    const now = new Date()
+    const sydneyDate = new Date(now.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }))
+    const year = sydneyDate.getFullYear()
+    const month = String(sydneyDate.getMonth() + 1).padStart(2, '0')
+    const day = String(sydneyDate.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })
+
   const [winner, setWinner] = useState('')
   const [partner1, setPartner1] = useState('')
   const [loser, setLoser] = useState('')
@@ -48,7 +57,7 @@ export default function RecordPage() {
     setTimeout(() => setStatus(''), 2500)
   }
 
-  if (players === undefined) {
+if (playersRaw === undefined || matches === undefined) {
     return (
       <>
         <Nav />
@@ -56,6 +65,16 @@ export default function RecordPage() {
       </>
     )
   }
+
+  const allRatings = calculateRatings(playersRaw, matches)
+  const maxGames = Math.max(...allRatings.map((r) => r.gamesPlayed), 0)
+  const threshold = maxGames * 0.3
+
+  const active = allRatings.filter((r) => r.gamesPlayed >= threshold && r.gamesPlayed > 0)
+  const provisional = allRatings.filter((r) => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
+  const unstarted = allRatings.filter((r) => r.gamesPlayed === 0)
+
+  const players = [...active, ...provisional, ...unstarted].map((r) => r.name)
 
   return (
     <>
