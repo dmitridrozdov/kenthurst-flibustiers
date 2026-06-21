@@ -106,11 +106,11 @@ export default function HomePage() {
         <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
       </>
     )
-  }
+  } 
 
   const allRatings = calculateRatings(players, matches)
   const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed))
-  const threshold = maxGames * 0.5
+  const threshold = maxGames * 0.3
 
   const ratings = allRatings.filter(r => r.gamesPlayed >= threshold)
   const provisional = allRatings.filter(r => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
