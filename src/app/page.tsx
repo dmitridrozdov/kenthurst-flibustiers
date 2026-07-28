@@ -7,6 +7,12 @@ import { Match } from '@/lib/types'
 import Nav from '@/components/Nav'
 import styles from './page.module.css'
 
+const MAX_RATING = 16.5
+const BASE_K = 0.15
+const VETERAN_K = 0.10
+const VETERAN_THRESHOLD = 20
+const STARTING_RATING = 4.0
+
 function initials(name: string) {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 }
@@ -37,59 +43,86 @@ function buildHistory(player: string, matches: Match[]) {
   for (const m of sorted) {
     const all = [m.winner, m.partner1, m.loser, m.partner2]
     all.forEach((p) => {
-      if (!(p in ratings)) { ratings[p] = 1200; recentGames[p] = 0; gamesPlayed[p] = 0 }
+      if (!(p in ratings)) {
+        ratings[p] = STARTING_RATING
+        recentGames[p] = 0
+        gamesPlayed[p] = 0
+      }
     })
 
     let wg = 0, lg = 0
     for (const s of m.score.split(',')) {
       const parts = s.trim().replace(/\(\d+\)/g, '').replace(/\s*draw\s*/gi, '').split('-').map(Number)
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) { wg += parts[0]; lg += parts[1] }
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        wg += parts[0]
+        lg += parts[1]
+      }
     }
-    const total = wg + lg
-    const domMult = total === 0 ? 1 : 0.5 + wg / total
+
     const isDraw = m.score.toLowerCase().includes('draw') || wg === lg
-    const effectiveDomMult = isDraw ? 1.0 : domMult
-
-    const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
-    const teamBAvg = (ratings[m.loser]  + ratings[m.partner2]) / 2
-    const expected = 1 / (1 + Math.pow(10, (teamBAvg - teamAAvg) / 400))
-
     const involves = (p: string) => all.includes(p)
     const isWinner = (p: string) => [m.winner, m.partner1].includes(p)
 
     if (involves(player)) {
       const win = isWinner(player)
       const mult = 1 + Math.min(0.30, recentGames[player] * 0.03)
-      const K = gamesPlayed[player] >= 20 ? 24 : 32
-      const resultVal = isDraw ? 0.5 : (win ? 1 : 0)
-      const actFactor = isDraw ? 1 : (win ? mult : 1 / mult)
-      const playerExpected = win ? expected : 1 - expected
-      const pts = Math.round(K * actFactor * effectiveDomMult * (resultVal - playerExpected))
-      history.push({ win: isDraw ? true : win, pts: Math.abs(pts) })
+      const k = gamesPlayed[player] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
+      let pts: number
+
+      if (isDraw) {
+        const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
+        const teamBAvg = (ratings[m.loser] + ratings[m.partner2]) / 2
+        const midpoint = (teamAAvg + teamBAvg) / 2
+        pts = Math.abs(k * (midpoint - ratings[player]))
+      } else {
+        const total = wg + lg || 1
+        const winPerf = MAX_RATING * Math.pow(wg / total, 1.2)
+        const losePerf = MAX_RATING * Math.pow(lg / total, 1.2)
+        const perf = win ? winPerf : losePerf
+        const actFactor = win ? mult : (1 / mult)
+        pts = Math.abs(k * actFactor * (perf - ratings[player]))
+      }
+
+      history.push({ win: isDraw ? true : win, pts: parseFloat(pts.toFixed(2)) })
     }
 
-    ;[m.winner, m.partner1].forEach((p) => {
-      const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
-      const K = gamesPlayed[p] >= 20 ? 24 : 32
-      const actFactor = isDraw ? 1 : mult
-      const resultVal = isDraw ? 0.5 : 1
-      ratings[p] += Math.round(K * actFactor * effectiveDomMult * (resultVal - expected))
-      gamesPlayed[p]++
-      const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
-      if (days <= 60) recentGames[p]++
-    })
+    // update ratings for all players to keep state correct for future matches
+    const total = wg + lg || 1
 
-    ;[m.loser, m.partner2].forEach((p) => {
-      const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
-      const K = gamesPlayed[p] >= 20 ? 24 : 32
-      const actFactor = isDraw ? 1 : (1 / mult)
-      const resultVal = isDraw ? 0.5 : 0
-      const loserExpected = 1 - expected
-      ratings[p] += Math.round(K * actFactor * effectiveDomMult * (resultVal - loserExpected))
-      gamesPlayed[p]++
-      const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
-      if (days <= 60) recentGames[p]++
-    })
+    if (isDraw) {
+      const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
+      const teamBAvg = (ratings[m.loser] + ratings[m.partner2]) / 2
+      const midpoint = (teamAAvg + teamBAvg) / 2
+
+      ;[m.winner, m.partner1, m.loser, m.partner2].forEach((p) => {
+        const k = gamesPlayed[p] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
+        ratings[p] = parseFloat((ratings[p] + k * (midpoint - ratings[p])).toFixed(2))
+        gamesPlayed[p]++
+        const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
+        if (days <= 60) recentGames[p]++
+      })
+    } else {
+      const winPerf = MAX_RATING * Math.pow(wg / total, 1.2)
+      const losePerf = MAX_RATING * Math.pow(lg / total, 1.2)
+
+      ;[m.winner, m.partner1].forEach((p) => {
+        const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
+        const k = gamesPlayed[p] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
+        ratings[p] = parseFloat(Math.min(MAX_RATING, ratings[p] + k * mult * (winPerf - ratings[p])).toFixed(2))
+        gamesPlayed[p]++
+        const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
+        if (days <= 60) recentGames[p]++
+      })
+
+      ;[m.loser, m.partner2].forEach((p) => {
+        const mult = 1 + Math.min(0.30, recentGames[p] * 0.03)
+        const k = gamesPlayed[p] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
+        ratings[p] = parseFloat(Math.max(1.0, ratings[p] + k * (1 / mult) * (losePerf - ratings[p])).toFixed(2))
+        gamesPlayed[p]++
+        const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
+        if (days <= 60) recentGames[p]++
+      })
+    }
   }
 
   return history.slice(-10)
@@ -106,19 +139,18 @@ export default function HomePage() {
         <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text2)' }}>Loading…</div>
       </>
     )
-  } 
+  }
 
   const allRatings = calculateRatings(players, matches)
-  const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed))
+  const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed), 0)
   const threshold = maxGames * 0.3
 
-  const ratings = allRatings.filter(r => r.gamesPlayed >= threshold)
+  const ratings = allRatings.filter(r => r.gamesPlayed >= threshold && r.gamesPlayed > 0)
   const provisional = allRatings.filter(r => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
   const unstarted = allRatings.filter(r => r.gamesPlayed === 0)
 
   const history: Record<string, { win: boolean; pts: number }[]> = {}
   players.forEach((p) => { history[p] = buildHistory(p, matches) })
- 
 
   const thisMonth = matches.filter((m) => {
     const d = new Date(m.date)
@@ -147,7 +179,7 @@ export default function HomePage() {
           </h1>
           <div className={styles.heroDivider} />
           <p className={styles.heroSub}>
-            Live ELO-based doubles ratings with activity multipliers. Play more, climb faster.
+            UTR-style doubles ratings with activity multipliers. Play more, climb faster.
           </p>
           <div className={styles.heroStats}>
             <div>
@@ -169,27 +201,20 @@ export default function HomePage() {
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Doubles Ladder</h2>
-            <span className={styles.sectionBadge}>Pair ELO · Activity Bonus</span>
+            <span className={styles.sectionBadge}>UTR-style · Activity Bonus</span>
           </div>
 
           <div className={styles.panel}>
             <div className={styles.panelHeader}>
               <span className={styles.panelLabel}>Player · Doubles Rating</span>
-              <span className={styles.panelLabel} style={{ display: 'flex', gap: '1.5rem' }}>
-                {/* <span>Act. Mult</span> */}
-                <span>Games</span>
-              </span>
+              <span className={styles.panelLabel}>Games</span>
             </div>
             {ratings.map((r, i) => {
               const av = avatarColor(r.name)
-              const actLevel = r.recentGames >= 6 ? '#6bbd5e' : r.recentGames >= 3 ? '#c9a84c' : '#847e70'
               return (
                 <div key={r.name} className={styles.playerRow}>
                   <div className={`${styles.rank} ${i < 3 ? styles.rankTop : ''}`}>{i + 1}</div>
-                  <div
-                    className={styles.avatar}
-                    style={{ background: av.bg, color: av.color }}
-                  >
+                  <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
                     {initials(r.name)}
                   </div>
                   <div className={styles.playerInfo}>
@@ -200,147 +225,140 @@ export default function HomePage() {
                           <div
                             key={i}
                             className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}
-                            title={`${h.win ? '+' : '-'}${h.pts} pts`}
+                            title={`${h.win ? '+' : '-'}${h.pts.toFixed(2)}`}
                           >
-                            {h.win ? '+' : '-'}{h.pts}
+                            {h.win ? '+' : '-'}{h.pts.toFixed(2)}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                   <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
-                    <div className={styles.ratingScore}>{r.rating}</div>
+                    <div className={styles.ratingScore}>{r.rating.toFixed(2)}</div>
                     <div className={`${styles.ratingChange} ${r.ratingChange >= 0 ? styles.pos : styles.neg}`}>
-                      {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange} pts
+                      {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange.toFixed(2)}
                     </div>
                   </div>
-                  {/* <div className={styles.multCol}>
-                    <span className={styles.multBadge}>×{r.activityMultiplier.toFixed(2)}</span>
+                  <div className={styles.multCol}>
                     <span className={styles.gamesCol}>{r.gamesPlayed}</span>
-                  </div> */}
+                  </div>
                 </div>
               )
             })}
 
-
             {provisional.length > 0 && (
-            <>
-              <h3 style={{ marginTop: '2rem', marginBottom: '1rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
-                Provisional
-              </h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: '1rem', marginLeft: '2rem',fontWeight: 300 }}>
-                Fewer than {Math.ceil(threshold)} games played — not yet ranked
-              </p>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span className={styles.panelLabel}>Player · Rating</span>
-                  <span className={styles.panelLabel}>Games</span>
-                </div>
-                {provisional.map((r) => {
-                  const av = avatarColor(r.name)
-                  const actLevel = r.recentGames >= 6 ? '#6bbd5e' : r.recentGames >= 3 ? '#c9a84c' : '#847e70'
-                  return (
-                    <div key={r.name} className={styles.playerRow}>
-                      <div className={styles.rank}>—</div>
-                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
-                        {initials(r.name)}
-                      </div>
-                      <div className={styles.playerInfo}>
-                        <div className={styles.playerName}>{r.name}</div>
-                        {history[r.name] && history[r.name].length > 0 && (
-                          <div className={styles.historyStrip}>
-                            {[...history[r.name]].reverse().map((h, i) => (
-                              <div key={i} className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}>
-                                {h.win ? '+' : '-'}{h.pts}
-                              </div>
-                            ))}
+              <>
+                <h3 style={{ marginTop: '2rem', marginBottom: '0.5rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
+                  Provisional
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text3)', marginBottom: '1rem', marginLeft: '2rem', fontWeight: 300 }}>
+                  Fewer than {Math.ceil(threshold)} games played — not yet ranked
+                </p>
+                <div className={styles.panel}>
+                  <div className={styles.panelHeader}>
+                    <span className={styles.panelLabel}>Player · Rating</span>
+                    <span className={styles.panelLabel}>Games</span>
+                  </div>
+                  {provisional.map((r) => {
+                    const av = avatarColor(r.name)
+                    return (
+                      <div key={r.name} className={styles.playerRow}>
+                        <div className={styles.rank}>—</div>
+                        <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
+                          {initials(r.name)}
+                        </div>
+                        <div className={styles.playerInfo}>
+                          <div className={styles.playerName}>{r.name}</div>
+                          {history[r.name] && history[r.name].length > 0 && (
+                            <div className={styles.historyStrip}>
+                              {[...history[r.name]].reverse().map((h, i) => (
+                                <div key={i} className={`${styles.histBox} ${h.win ? styles.histWin : styles.histLoss}`}>
+                                  {h.win ? '+' : '-'}{h.pts.toFixed(2)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                          <div className={styles.ratingScore} style={{ color: 'var(--text2)' }}>{r.rating.toFixed(2)}</div>
+                          <div className={`${styles.ratingChange} ${r.ratingChange >= 0 ? styles.pos : styles.neg}`}>
+                            {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange.toFixed(2)}
                           </div>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
-                        <div className={styles.ratingScore} style={{ color: 'var(--text2)' }}>{r.rating}</div>
-                        <div className={`${styles.ratingChange} ${r.ratingChange >= 0 ? styles.pos : styles.neg}`}>
-                          {r.ratingChange >= 0 ? '+' : ''}{r.ratingChange} pts
+                        </div>
+                        <div className={styles.multCol}>
+                          <span className={styles.gamesCol}>{r.gamesPlayed}</span>
                         </div>
                       </div>
-                      {/* <div className={styles.multCol}>
-                        <span className={styles.gamesCol}>{r.gamesPlayed}</span>
-                      </div> */}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-
+                    )
+                  })}
+                </div>
+              </>
+            )}
 
             {unstarted.length > 0 && (
-            <>
-              <h3 style={{ marginTop: '2rem', marginBottom: '1rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
-                Yet to play
-              </h3>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span className={styles.panelLabel}>Player</span>
-                  <span className={styles.panelLabel}>Starting Rating</span>
+              <>
+                <h3 style={{ marginTop: '2rem', marginBottom: '1rem', marginLeft: '2rem', fontSize: '1rem', fontWeight: 500, color: 'var(--text2)', letterSpacing: '0.05em' }}>
+                  Yet to play
+                </h3>
+                <div className={styles.panel}>
+                  <div className={styles.panelHeader}>
+                    <span className={styles.panelLabel}>Player</span>
+                    <span className={styles.panelLabel}>Starting Rating</span>
+                  </div>
+                  {unstarted.map((r) => {
+                    const av = avatarColor(r.name)
+                    return (
+                      <div key={r.name} className={styles.playerRow}>
+                        <div className={styles.rank}>—</div>
+                        <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
+                          {initials(r.name)}
+                        </div>
+                        <div className={styles.playerInfo}>
+                          <div className={styles.playerName}>{r.name}</div>
+                        </div>
+                        <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
+                          <div className={styles.ratingScore} style={{ color: 'var(--text3)' }}>4.00</div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                {unstarted.map((r) => {
-                  const av = avatarColor(r.name)
-                  return (
-                    <div key={r.name} className={styles.playerRow}>
-                      <div className={styles.rank}>—</div>
-                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
-                        {initials(r.name)}
-                      </div>
-                      <div className={styles.playerInfo}>
-                        <div className={styles.playerName}>{r.name}</div>
-                        <div className={styles.playerMeta}>No matches played yet</div>
-                      </div>
-                      <div style={{ textAlign: 'right', marginRight: '0.5rem' }}>
-                        <div className={styles.ratingScore} style={{ color: 'var(--text3)' }}>1200</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-
+              </>
+            )}
           </div>
 
           {/* EXPLAINER */}
           <div className={styles.explainer}>
             <h3 className={styles.explainerTitle}>How ratings are calculated</h3>
             <p className={styles.explainerText}>
-              A modified ELO system with an activity bonus that rewards players who show up
+              A UTR-inspired system with an activity bonus that rewards players who show up
               consistently. Your partner&apos;s rating and your own recent activity both influence
-              how fast you gain points.
+              how fast you gain or lose points.
             </p>
-            <pre className={styles.formula}>{`New Rating   = OldRating + K × ActivityMult × DomMult × (Result − Expected)
-Expected     = 1 / (1 + 10^((TeamB_avg − TeamA_avg) / 400))
-ActivityMult = 1.0 + min(0.30, matchesLast60Days × 0.03)  → ×mult on wins, ×(1/mult) on losses
-DomMult      = 0.5 + (winnerGames / totalGames)  →  range: 1.0 – 1.5
-Team Rating  = average of both partners' individual doubles ratings`}</pre>
-
+            <pre className={styles.formula}>{`Scale        = 1.0 – 16.5  (UTR-style, starting rating 4.0)
+Performance  = 16.5 × (gamesWon / totalGames)^1.2
+New Rating   = OldRating + K × ActivityMult × (Performance − OldRating)
+ActivityMult = 1.0 + min(0.30, matchesLast60Days × 0.03)  →  wins boosted, losses softened
+K            = 0.15 (0.10 after 20 games for stability)
+Draw         = both pairs move toward midpoint of team averages`}</pre>
             <div className={styles.factorsGrid}>
               <div className={styles.factorCard}>
-                <div className={styles.factorName}>K-Factor</div>
-                <div className={styles.factorDesc}>Base of 32. Drops to 24 after 20 games for more stable ratings over time.</div>
+                <div className={styles.factorName}>UTR Scale</div>
+                <div className={styles.factorDesc}>Ratings run 1.0 – 16.5. Everyone starts at 4.0. Top club players typically settle between 6 and 10.</div>
+              </div>
+              <div className={styles.factorCard}>
+                <div className={styles.factorName}>Performance Score</div>
+                <div className={styles.factorDesc}>Based on games won vs lost across all sets. 6-0 is far more rewarding than 7-5. Exponent of 1.2 amplifies dominant wins.</div>
               </div>
               <div className={styles.factorCard}>
                 <div className={styles.factorName}>Activity Bonus</div>
-                <div className={styles.factorDesc}>+3% per match in last 60 days, capped at +30%. Boosts wins and softens losses — the more you play, the more the ladder rewards you.</div>
-              </div>
-              <div className={styles.factorCard}>
-                <div className={styles.factorName}>Dominance Multiplier</div>
-                <div className={styles.factorDesc}>Scales points by set margin. 6-0, 6-0 gives ×1.5 — a 7-6, 6-7, 7-6 war gives ×1.04. Closer to ×1.5 the more dominant the win.</div>
+                <div className={styles.factorDesc}>+3% per match in last 60 days, capped at +30%. Boosts wins and softens losses — regulars benefit most.</div>
               </div>
               <div className={styles.factorCard}>
                 <div className={styles.factorName}>Doubles Split</div>
-                <div className={styles.factorDesc}>Each partner gains/loses individually. Team average determines the expected result.</div>
+                <div className={styles.factorDesc}>Both partners move toward the same performance score. Draws move both pairs toward their combined average.</div>
               </div>
             </div>
-
           </div>
         </div>
       </main>
