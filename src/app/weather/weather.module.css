@@ -1,0 +1,415 @@
+.section {
+  padding: 2rem 2rem 4rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 6rem 2rem;
+  color: var(--text2);
+  font-size: 0.9rem;
+}
+
+.loadingSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.location {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text3);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.updated {
+  font-size: 0.7rem;
+  color: var(--text3);
+  font-weight: 300;
+  letter-spacing: 0.05em;
+}
+
+/* CURRENT */
+.currentCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.currentLeft {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.currentEmoji {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.currentTemp {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.currentLabel {
+  font-size: 0.9rem;
+  color: var(--text2);
+  margin-top: 0.25rem;
+  font-weight: 400;
+}
+
+.currentRange {
+  font-size: 0.78rem;
+  color: var(--text3);
+  margin-top: 0.25rem;
+  font-weight: 300;
+}
+
+.currentRight {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.currentStat {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.currentStatIcon {
+  font-size: 1.4rem;
+}
+
+.currentStatVal {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.currentStatLbl {
+  font-size: 0.68rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+/* RAIN ALERTS */
+.rainAlert {
+  background: rgba(255, 107, 74, 0.08);
+  border: 1px solid rgba(255, 107, 74, 0.3);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rainAlertTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--red);
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.rainWindow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(255, 107, 74, 0.15);
+}
+
+.rainWindowTime {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.rainWindowDetails {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rainProb {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.rainMm {
+  font-size: 0.75rem;
+  color: var(--text3);
+  font-weight: 300;
+}
+
+.clearAlert {
+  background: rgba(125, 209, 110, 0.08);
+  border: 1px solid rgba(125, 209, 110, 0.25);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  color: var(--green-light);
+  font-weight: 500;
+}
+
+/* RISK LEVELS */
+.riskHigh { background: rgba(255,107,74,0.2); color: var(--red); }
+.riskMed  { background: rgba(212,180,74,0.2); color: var(--gold2); }
+.riskLow  { background: rgba(125,209,110,0.15); color: var(--green-light); }
+.riskNone { background: rgba(125,209,110,0.1); color: var(--green-light); }
+
+/* SECTION HEADER */
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* HOURLY STRIP */
+.hourlyStrip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.hourCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 62px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.hourCardNow {
+  border-color: var(--gold);
+  background: rgba(212, 180, 74, 0.08);
+}
+
+.hourTime {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hourEmoji {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.hourTemp {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.hourProb {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.hourProbHigh { background: rgba(255,107,74,0.2); color: var(--red); }
+.hourProbMed  { background: rgba(212,180,74,0.18); color: var(--gold2); }
+.hourProbLow  { background: rgba(125,209,110,0.12); color: var(--green-light); }
+
+.hourMm {
+  font-size: 0.6rem;
+  color: var(--text3);
+  font-weight: 300;
+}
+
+/* 7-DAY */
+.dailyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dayRow {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: background 0.15s;
+  flex-wrap: wrap;
+}
+
+.dayRow:hover { background: var(--bg3); }
+
+.dayRowToday {
+  border-color: var(--gold);
+}
+
+.dayLabel {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.dayEmoji {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.dayCondition {
+  font-size: 0.8rem;
+  color: var(--text2);
+  font-weight: 300;
+  flex: 1;
+  min-width: 80px;
+}
+
+.dayTemps {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+
+.dayMax {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dayMin {
+  font-size: 0.82rem;
+  color: var(--text3);
+  font-weight: 300;
+}
+
+.dayRain {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.dayProb {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.dayMm {
+  font-size: 0.72rem;
+  color: var(--text3);
+  font-weight: 300;
+}
+
+.dayWind {
+  font-size: 0.75rem;
+  color: var(--text3);
+  font-weight: 300;
+  flex-shrink: 0;
+  min-width: 90px;
+}
+
+.courtBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.courtGood  { background: rgba(125,209,110,0.15); color: var(--green-light); border: 1px solid rgba(125,209,110,0.3); }
+.courtMaybe { background: rgba(212,180,74,0.15);  color: var(--gold2);       border: 1px solid rgba(212,180,74,0.3); }
+.courtBad   { background: rgba(255,107,74,0.15);  color: var(--red);         border: 1px solid rgba(255,107,74,0.3); }
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  color: var(--text3);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  margin-top: 4rem;
+  font-weight: 300;
+}
+
+.footer em {
+  color: var(--gold);
+  font-style: italic;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .currentCard { flex-direction: column; align-items: flex-start; }
+  .currentRight { gap: 1rem; }
+  .dayCondition { display: none; }
+  .dayWind { display: none; }
+}
