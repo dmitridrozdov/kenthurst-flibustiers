@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+
 .section {
   padding: 3rem 2rem;
   max-width: 900px;
@@ -98,34 +101,34 @@
 }
 
 .setNum {
+  /* font-family: 'Bebas Neue', sans-serif; */
   font-size: 0.85rem;
   font-weight: 700;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  width: 28px;
+  background: transparent;
+  border: none;
+  width: 22px;
   height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
 }
 
 .setNum.setWin {
-  background: rgba(201, 168, 76, 0.2);
-  border-color: var(--gold);
+  font-size: 1.25rem;
   color: var(--gold2);
 }
 
 .setNum.setLose {
+  font-size: 1rem;
   color: var(--text3);
-  border-color: var(--border);
 }
 
 .setDivider {
   width: 1px;
-  height: 52px;
-  background: var(--border2);
-  margin: 0 4px;
+  height: 44px;
+  background: var(--border);
+  margin: 0 6px;
+  opacity: 0.4;
   flex-shrink: 0;
 }
 
