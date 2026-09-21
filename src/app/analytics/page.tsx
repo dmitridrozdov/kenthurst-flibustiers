@@ -195,7 +195,7 @@ function buildPairStats(matches: Match[]) {
 
   return Object.entries(pairs)
     .map(([pair, s]) => ({ pair, ...s, total: s.wins + s.losses + s.draws, winRate: s.wins + s.losses > 0 ? Math.round(s.wins / (s.wins + s.losses) * 100) : 0 }))
-    .filter(p => p.total >= 2)
+    .filter(p => p.total >= 1)
     .sort((a, b) => b.total - a.total)
 }
 
