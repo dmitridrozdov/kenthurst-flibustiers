@@ -103,30 +103,31 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
       const opp1 = isWinner ? m.loser : m.winner
       const opp2 = isWinner ? m.partner2 : m.partner1
 
-      // partners
       if (!stats.partners[partner]) stats.partners[partner] = { wins: 0, losses: 0 }
-      // opponents
       ;[opp1, opp2].forEach(o => {
         if (!stats.opponents[o]) stats.opponents[o] = { wins: 0, losses: 0 }
       })
 
       if (draw) {
         stats.draws++
-        ;[opp1, opp2].forEach(o => { stats.opponents[o].losses += 0 })
-        streakType = 'D'; streakCount = streakCount === 0 || streakType === 'D' ? streakCount + 1 : 1
+        if (streakType === 'D') streakCount++
+        else { streakType = 'D'; streakCount = 1 }
       } else if (isWinner) {
         stats.wins++
-        stats.totalGamesWon += wg; stats.totalGamesLost += lg
+        stats.totalGamesWon += wg
+        stats.totalGamesLost += lg
         stats.partners[partner].wins++
         ;[opp1, opp2].forEach(o => stats.opponents[o].wins++)
-        if (!stats.bestWin || wg - lg > (stats.bestWin ? parseInt(stats.bestWin.score.split('-')[0]) - parseInt(stats.bestWin.score.split('-')[1]) : 0)) {
+        const margin = wg - lg
+        if (!stats.bestWin || margin > (stats.bestWin ? parseInt(stats.bestWin.score.split('-')[0]) - parseInt(stats.bestWin.score.split('-')[1]) : 0)) {
           stats.bestWin = { opponent: `${opp1} / ${opp2}`, score: m.score, date: m.date }
         }
         if (streakType === 'W') streakCount++
         else { streakType = 'W'; streakCount = 1 }
       } else {
         stats.losses++
-        stats.totalGamesWon += lg; stats.totalGamesLost += wg
+        stats.totalGamesWon += lg
+        stats.totalGamesLost += wg
         stats.partners[partner].losses++
         ;[opp1, opp2].forEach(o => stats.opponents[o].losses++)
         if (streakType === 'L') streakCount++
@@ -135,7 +136,7 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
       stats.gamesPlayed++
     }
 
-    // update ratings
+    // update ratings state
     const mult = (p: string) => 1 + Math.min(0.30, recentGames[p] * 0.03)
     const k = (p: string) => gamesPlayed[p] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
     const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
@@ -154,11 +155,13 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
       const wp = perf(wg, lg), lp = perf(lg, wg)
       ;[m.winner, m.partner1].forEach(p => {
         ratings[p] = parseFloat(Math.min(MAX_RATING, ratings[p] + k(p) * mult(p) * (wp - ratings[p])).toFixed(2))
-        gamesPlayed[p]++; if (isRecent) recentGames[p]++
+        gamesPlayed[p]++
+        if (isRecent) recentGames[p]++
       })
       ;[m.loser, m.partner2].forEach(p => {
         ratings[p] = parseFloat(Math.max(1.0, ratings[p] + k(p) * (1 / mult(p)) * (lp - ratings[p])).toFixed(2))
-        gamesPlayed[p]++; if (isRecent) recentGames[p]++
+        gamesPlayed[p]++
+        if (isRecent) recentGames[p]++
       })
     }
 
@@ -185,22 +188,50 @@ function buildPairStats(matches: Match[]) {
     if (!pairs[loseKey]) pairs[loseKey] = { wins: 0, losses: 0, draws: 0, matches: [] }
 
     if (draw) {
-      pairs[pairKey].draws++; pairs[loseKey].draws++
+      pairs[pairKey].draws++
+      pairs[loseKey].draws++
     } else {
-      pairs[pairKey].wins++; pairs[loseKey].losses++
+      pairs[pairKey].wins++
+      pairs[loseKey].losses++
     }
     pairs[pairKey].matches.push(m)
-    pairs[loseKey].matches.push(m)
+    if (pairKey !== loseKey) pairs[loseKey].matches.push(m)
   }
 
   return Object.entries(pairs)
-    .map(([pair, s]) => ({ pair, ...s, total: s.wins + s.losses + s.draws, winRate: s.wins + s.losses > 0 ? Math.round(s.wins / (s.wins + s.losses) * 100) : 0 }))
+    .map(([pair, s]) => ({
+      pair, ...s,
+      total: s.wins + s.losses + s.draws,
+      winRate: s.wins + s.losses > 0 ? Math.round(s.wins / (s.wins + s.losses) * 100) : 0,
+    }))
     .filter(p => p.total >= 1)
     .sort((a, b) => b.total - a.total)
 }
 
-// Tiny SVG sparkline
-function RatingChart({ history }: { history: { date: string; rating: number }[] }) {
+function getDayBoxes(ratingHistory: { date: string; rating: number }[]) {
+  if (ratingHistory.length === 0) return []
+  const latestDate = ratingHistory[ratingHistory.length - 1].date
+  const todayEntries = ratingHistory.filter(h => h.date === latestDate)
+  const prevEntry = [...ratingHistory].reverse().find(h => h.date !== latestDate)
+  const prevRating = prevEntry?.rating ?? STARTING_RATING
+
+  return todayEntries.map((h, i) => {
+    const prevR = i === 0 ? prevRating : todayEntries[i - 1].rating
+    const delta = parseFloat((h.rating - prevR).toFixed(2))
+    return { delta }
+  })
+}
+
+// Unique gradient id per player to avoid SVG gradient collision
+function RatingChart({
+  history,
+  dayChange,
+  uid,
+}: {
+  history: { date: string; rating: number }[]
+  dayChange: number
+  uid: string
+}) {
   if (history.length < 2) return <div className={styles.chartEmpty}>Not enough data</div>
 
   const W = 320, H = 80, PAD = 8
@@ -217,36 +248,48 @@ function RatingChart({ history }: { history: { date: string; rating: number }[] 
 
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
   const areaD = `${pathD} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`
-
   const last = points[points.length - 1]
-  const prev = points[points.length - 2]
-  const trending = last.y < prev.y
+  const color = dayChange >= 0 ? '#7dd16e' : '#ff6b4a'
+  const gradId = `cg_${uid}`
 
   return (
     <div className={styles.chartWrap}>
       <svg viewBox={`0 0 ${W} ${H}`} className={styles.chart} preserveAspectRatio="none">
         <defs>
-          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={trending ? '#7dd16e' : '#ff6b4a'} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={trending ? '#7dd16e' : '#ff6b4a'} stopOpacity="0" />
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={areaD} fill="url(#chartGrad)" />
-        <path d={pathD} fill="none" stroke={trending ? '#7dd16e' : '#ff6b4a'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={areaD} fill={`url(#${gradId})`} />
+        <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r="2.5"
-            fill={trending ? '#7dd16e' : '#ff6b4a'}
+            fill={color}
             opacity={i === points.length - 1 ? 1 : 0.4}
           />
         ))}
       </svg>
       <div className={styles.chartLabels}>
         <span>{history[0].date.slice(5)}</span>
-        <span className={trending ? styles.trendUp : styles.trendDown}>
-          {trending ? '↑' : '↓'} {last.rating.toFixed(2)}
+        <span className={dayChange >= 0 ? styles.trendUp : styles.trendDown}>
+          {dayChange >= 0 ? '↑' : '↓'} {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}
         </span>
         <span>{history[history.length - 1].date.slice(5)}</span>
       </div>
+    </div>
+  )
+}
+
+function DayBoxes({ boxes }: { boxes: { delta: number }[] }) {
+  if (boxes.length === 0) return null
+  return (
+    <div className={styles.dayChangeRow}>
+      {boxes.map((b, i) => (
+        <div key={i} className={`${styles.dayBox} ${b.delta >= 0 ? styles.dayBoxWin : styles.dayBoxLoss}`}>
+          {b.delta >= 0 ? '+' : ''}{b.delta.toFixed(2)}
+        </div>
+      ))}
     </div>
   )
 }
@@ -266,8 +309,8 @@ export default function AnalyticsPage() {
 
   const allRatings = calculateRatings(players, matches)
   const pairStats = buildPairStats(matches)
-
   const selectedStats = selected ? buildPlayerStats(selected, matches) : null
+  const selectedRating = allRatings.find(r => r.name === selected)
 
   return (
     <>
@@ -277,27 +320,42 @@ export default function AnalyticsPage() {
           <div className={styles.pageHeader}>
             <h1 className={styles.title}>Analytics</h1>
             <div className={styles.tabs}>
-              <button className={`${styles.tab} ${tab === 'players' ? styles.tabActive : ''}`} onClick={() => { setTab('players'); setSelected(null) }}>Players</button>
-              <button className={`${styles.tab} ${tab === 'pairs' ? styles.tabActive : ''}`} onClick={() => { setTab('pairs'); setSelected(null) }}>Pairs</button>
+              <button
+                className={`${styles.tab} ${tab === 'players' ? styles.tabActive : ''}`}
+                onClick={() => { setTab('players'); setSelected(null) }}
+              >
+                Players
+              </button>
+              <button
+                className={`${styles.tab} ${tab === 'pairs' ? styles.tabActive : ''}`}
+                onClick={() => { setTab('pairs'); setSelected(null) }}
+              >
+                Pairs
+              </button>
             </div>
           </div>
 
+          {/* ── PLAYER GRID ── */}
           {tab === 'players' && !selected && (
             <div className={styles.playerGrid}>
               {allRatings.filter(r => r.gamesPlayed > 0).map((r, i) => {
                 const av = avatarColor(r.name)
                 const stats = buildPlayerStats(r.name, matches)
+                const boxes = getDayBoxes(stats.ratingHistory)
                 return (
                   <button key={r.name} className={styles.playerCard} onClick={() => setSelected(r.name)}>
                     <div className={styles.playerCardTop}>
-                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>{initials(r.name)}</div>
+                      <div className={styles.avatar} style={{ background: av.bg, color: av.color }}>
+                        {initials(r.name)}
+                      </div>
                       <div>
                         <div className={styles.playerCardName}>{r.name}</div>
                         <div className={styles.playerCardRating}>{r.rating.toFixed(2)}</div>
                       </div>
                       <div className={`${styles.rankBadge} ${i < 3 ? styles.rankBadgeTop : ''}`}>#{i + 1}</div>
                     </div>
-                    <RatingChart history={stats.ratingHistory} />
+                    <RatingChart history={stats.ratingHistory} dayChange={r.ratingChange} uid={r.name} />
+                    <DayBoxes boxes={boxes} />
                     <div className={styles.statRow}>
                       <div className={styles.statBox}>
                         <div className={styles.statVal} style={{ color: 'var(--green-light)' }}>{stats.wins}</div>
@@ -322,20 +380,34 @@ export default function AnalyticsPage() {
             </div>
           )}
 
+          {/* ── PLAYER DETAIL ── */}
           {tab === 'players' && selected && selectedStats && (
             <div>
               <button className={styles.back} onClick={() => setSelected(null)}>← Back</button>
               <div className={styles.detailHeader}>
-                <div className={styles.avatar} style={{ background: avatarColor(selected).bg, color: avatarColor(selected).color, width: 52, height: 52, fontSize: '1rem' }}>
+                <div
+                  className={styles.avatar}
+                  style={{
+                    background: avatarColor(selected).bg,
+                    color: avatarColor(selected).color,
+                    width: 52,
+                    height: 52,
+                    fontSize: '1rem',
+                  }}
+                >
                   {initials(selected)}
                 </div>
                 <div>
                   <h2 className={styles.detailName}>{selected}</h2>
                   <div className={styles.detailRating}>
-                    {allRatings.find(r => r.name === selected)?.rating.toFixed(2)} UTR
+                    {selectedRating?.rating.toFixed(2)} UTR
                   </div>
                 </div>
-                <div className={`${styles.streakBadge} ${selectedStats.streak.type === 'W' ? styles.streakW : selectedStats.streak.type === 'L' ? styles.streakL : styles.streakD}`}>
+                <div className={`${styles.streakBadge} ${
+                  selectedStats.streak.type === 'W' ? styles.streakW
+                  : selectedStats.streak.type === 'L' ? styles.streakL
+                  : styles.streakD
+                }`}>
                   {selectedStats.streak.count}{selectedStats.streak.type} streak
                 </div>
               </div>
@@ -343,7 +415,12 @@ export default function AnalyticsPage() {
               {/* Rating over time */}
               <div className={styles.detailCard}>
                 <div className={styles.detailCardTitle}>Rating over time</div>
-                <RatingChart history={selectedStats.ratingHistory} />
+                <RatingChart
+                  history={selectedStats.ratingHistory}
+                  dayChange={selectedRating?.ratingChange ?? 0}
+                  uid={`detail_${selected}`}
+                />
+                <DayBoxes boxes={getDayBoxes(selectedStats.ratingHistory)} />
               </div>
 
               {/* Key stats */}
@@ -351,20 +428,35 @@ export default function AnalyticsPage() {
                 <div className={styles.detailCard}>
                   <div className={styles.detailCardTitle}>Record</div>
                   <div className={styles.bigStatRow}>
-                    <div className={styles.bigStat}><span style={{ color: 'var(--green-light)' }}>{selectedStats.wins}W</span></div>
-                    <div className={styles.bigStat}><span style={{ color: 'var(--red)' }}>{selectedStats.losses}L</span></div>
-                    {selectedStats.draws > 0 && <div className={styles.bigStat}><span style={{ color: 'var(--text2)' }}>{selectedStats.draws}D</span></div>}
+                    <div className={styles.bigStat}>
+                      <span style={{ color: 'var(--green-light)' }}>{selectedStats.wins}W</span>
+                    </div>
+                    <div className={styles.bigStat}>
+                      <span style={{ color: 'var(--red)' }}>{selectedStats.losses}L</span>
+                    </div>
+                    {selectedStats.draws > 0 && (
+                      <div className={styles.bigStat}>
+                        <span style={{ color: 'var(--text2)' }}>{selectedStats.draws}D</span>
+                      </div>
+                    )}
                   </div>
                   <div className={styles.winBar}>
                     <div className={styles.winBarFill} style={{ width: `${selectedStats.winRate}%` }} />
                   </div>
                   <div className={styles.winBarLabel}>{selectedStats.winRate}% win rate</div>
                 </div>
+
                 <div className={styles.detailCard}>
                   <div className={styles.detailCardTitle}>Games</div>
                   <div className={styles.bigStatRow}>
-                    <div className={styles.bigStat}><span style={{ color: 'var(--gold2)' }}>{selectedStats.totalGamesWon}</span><div className={styles.bigStatLbl}>Won</div></div>
-                    <div className={styles.bigStat}><span style={{ color: 'var(--text3)' }}>{selectedStats.totalGamesLost}</span><div className={styles.bigStatLbl}>Lost</div></div>
+                    <div className={styles.bigStat}>
+                      <span style={{ color: 'var(--gold2)' }}>{selectedStats.totalGamesWon}</span>
+                      <div className={styles.bigStatLbl}>Won</div>
+                    </div>
+                    <div className={styles.bigStat}>
+                      <span style={{ color: 'var(--text3)' }}>{selectedStats.totalGamesLost}</span>
+                      <div className={styles.bigStatLbl}>Lost</div>
+                    </div>
                   </div>
                   <div className={styles.winBarLabel}>
                     {selectedStats.totalGamesWon + selectedStats.totalGamesLost > 0
@@ -385,7 +477,12 @@ export default function AnalyticsPage() {
                     const av = avatarColor(name)
                     return (
                       <div key={name} className={styles.partnerRow}>
-                        <div className={styles.avatar} style={{ background: av.bg, color: av.color, width: 28, height: 28, fontSize: '0.6rem' }}>{initials(name)}</div>
+                        <div
+                          className={styles.avatar}
+                          style={{ background: av.bg, color: av.color, width: 28, height: 28, fontSize: '0.6rem' }}
+                        >
+                          {initials(name)}
+                        </div>
                         <div className={styles.partnerName}>{name}</div>
                         <div className={styles.partnerRecord}>
                           <span style={{ color: 'var(--green-light)' }}>{rec.wins}W</span>
@@ -415,16 +512,22 @@ export default function AnalyticsPage() {
             </div>
           )}
 
+          {/* ── PAIRS TAB ── */}
           {tab === 'pairs' && (
             <div className={styles.pairsGrid}>
               {pairStats.map((p) => {
                 const [p1, p2] = p.pair.split(' / ')
-                const av1 = avatarColor(p1), av2 = avatarColor(p2)
+                const av1 = avatarColor(p1)
+                const av2 = avatarColor(p2)
                 return (
                   <div key={p.pair} className={styles.pairCard}>
                     <div className={styles.pairAvatars}>
-                      <div className={styles.avatar} style={{ background: av1.bg, color: av1.color }}>{initials(p1)}</div>
-                      <div className={styles.avatar} style={{ background: av2.bg, color: av2.color, marginLeft: -10 }}>{initials(p2)}</div>
+                      <div className={styles.avatar} style={{ background: av1.bg, color: av1.color }}>
+                        {initials(p1)}
+                      </div>
+                      <div className={styles.avatar} style={{ background: av2.bg, color: av2.color, marginLeft: -10 }}>
+                        {initials(p2)}
+                      </div>
                       <div className={styles.pairNames}>{p1} & {p2}</div>
                     </div>
                     <div className={styles.statRow} style={{ marginTop: '1rem' }}>
@@ -452,7 +555,9 @@ export default function AnalyticsPage() {
                 )
               })}
               {pairStats.length === 0 && (
-                <div className={styles.empty}>Not enough pair data yet — pairs need at least 2 matches together.</div>
+                <div className={styles.empty}>
+                  Not enough pair data yet — pairs need at least 1 match together.
+                </div>
               )}
             </div>
           )}
