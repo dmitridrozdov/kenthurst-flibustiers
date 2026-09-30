@@ -136,7 +136,7 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
       stats.gamesPlayed++
     }
 
-    // update ratings state
+    // update ratings state — must mirror ratings.ts exactly
     const mult = (p: string) => 1 + Math.min(0.30, recentGames[p] * 0.03)
     const k = (p: string) => gamesPlayed[p] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
     const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
@@ -208,21 +208,33 @@ function buildPairStats(matches: Match[]) {
     .sort((a, b) => b.total - a.total)
 }
 
-function getDayBoxes(ratingHistory: { date: string; rating: number }[]) {
+// Use authoritative ratingChange from calculateRatings to avoid replay drift
+function getDayBoxes(
+  ratingHistory: { date: string; rating: number }[],
+  totalDayChange?: number
+): { delta: number }[] {
   if (ratingHistory.length === 0) return []
+
   const latestDate = ratingHistory[ratingHistory.length - 1].date
   const todayEntries = ratingHistory.filter(h => h.date === latestDate)
   const prevEntry = [...ratingHistory].reverse().find(h => h.date !== latestDate)
   const prevRating = prevEntry?.rating ?? STARTING_RATING
 
-  return todayEntries.map((h, i) => {
-    const prevR = i === 0 ? prevRating : todayEntries[i - 1].rating
-    const delta = parseFloat((h.rating - prevR).toFixed(2))
-    return { delta }
-  })
+  const boxes: { delta: number }[] = []
+  let prev = prevRating
+  for (const h of todayEntries) {
+    boxes.push({ delta: parseFloat((h.rating - prev).toFixed(2)) })
+    prev = h.rating
+  }
+
+  // when only one match today, use authoritative ratingChange to avoid floating point drift
+  if (boxes.length === 1 && totalDayChange !== undefined) {
+    boxes[0].delta = parseFloat(totalDayChange.toFixed(2))
+  }
+
+  return boxes.reverse()
 }
 
-// Unique gradient id per player to avoid SVG gradient collision
 function RatingChart({
   history,
   dayChange,
@@ -250,7 +262,7 @@ function RatingChart({
   const areaD = `${pathD} L ${points[points.length - 1].x} ${H} L ${points[0].x} ${H} Z`
   const last = points[points.length - 1]
   const color = dayChange >= 0 ? '#7dd16e' : '#ff6b4a'
-  const gradId = `cg_${uid}`
+  const gradId = `cg_${uid.replace(/\s+/g, '_')}`
 
   return (
     <div className={styles.chartWrap}>
@@ -341,7 +353,7 @@ export default function AnalyticsPage() {
               {allRatings.filter(r => r.gamesPlayed > 0).map((r, i) => {
                 const av = avatarColor(r.name)
                 const stats = buildPlayerStats(r.name, matches)
-                const boxes = getDayBoxes(stats.ratingHistory)
+                const boxes = getDayBoxes(stats.ratingHistory, r.ratingChange)
                 return (
                   <button key={r.name} className={styles.playerCard} onClick={() => setSelected(r.name)}>
                     <div className={styles.playerCardTop}>
@@ -420,7 +432,7 @@ export default function AnalyticsPage() {
                   dayChange={selectedRating?.ratingChange ?? 0}
                   uid={`detail_${selected}`}
                 />
-                <DayBoxes boxes={getDayBoxes(selectedStats.ratingHistory)} />
+                <DayBoxes boxes={getDayBoxes(selectedStats.ratingHistory, selectedRating?.ratingChange)} />
               </div>
 
               {/* Key stats */}
