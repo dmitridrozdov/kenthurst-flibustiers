@@ -104,6 +104,214 @@ function dayLabel(timeStr: string): string {
   return formatDay(timeStr)
 }
 
+// ── HOURLY CHART ──────────────────────────────────────────────
+function HourlyChart({ hours }: {
+  hours: { time: string; temp: number; prob: number; mm: number; code: number; wind: number }[]
+}) {
+  const W = 900
+  const H = 160
+  const PAD = { top: 24, bottom: 40, left: 36, right: 16 }
+  const innerW = W - PAD.left - PAD.right
+  const innerH = H - PAD.top - PAD.bottom
+
+  const temps = hours.map(h => h.temp)
+  const minT = Math.min(...temps) - 2
+  const maxT = Math.max(...temps) + 2
+
+  const tx = (i: number) => PAD.left + (i / (hours.length - 1)) * innerW
+  const ty = (t: number) => PAD.top + (1 - (t - minT) / (maxT - minT)) * innerH
+  const py = (p: number) => PAD.top + (1 - p / 100) * innerH
+
+  const tempPath = hours.map((h, i) => `${i === 0 ? 'M' : 'L'} ${tx(i)} ${ty(h.temp)}`).join(' ')
+  const tempArea = `${tempPath} L ${tx(hours.length - 1)} ${H - PAD.bottom} L ${tx(0)} ${H - PAD.bottom} Z`
+
+  const barW = Math.max(4, (innerW / hours.length) * 0.55)
+
+  const now = new Date()
+  const nowIdx = hours.findIndex(h => new Date(h.time) >= now)
+
+  return (
+    <div className={styles.chartContainer}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className={styles.hourlyChart}
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e8cc6e" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#e8cc6e" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="rainGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4a82b8" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#4a82b8" stopOpacity="0.15" />
+          </linearGradient>
+          <clipPath id="chartClip">
+            <rect x={PAD.left} y={PAD.top} width={innerW} height={innerH} />
+          </clipPath>
+        </defs>
+
+        {/* grid lines */}
+        {[0, 25, 50, 75, 100].map(p => (
+          <line
+            key={p}
+            x1={PAD.left} y1={py(p)}
+            x2={W - PAD.right} y2={py(p)}
+            stroke="rgba(255,255,255,0.04)"
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* rain bars */}
+        <g clipPath="url(#chartClip)">
+          {hours.map((h, i) => {
+            if (h.prob === 0) return null
+            const bh = (h.prob / 100) * innerH
+            return (
+              <rect
+                key={i}
+                x={tx(i) - barW / 2}
+                y={PAD.top + innerH - bh}
+                width={barW}
+                height={bh}
+                fill="url(#rainGrad)"
+                rx="2"
+              />
+            )
+          })}
+        </g>
+
+        {/* temp area */}
+        <path d={tempArea} fill="url(#tempGrad)" clipPath="url(#chartClip)" />
+
+        {/* temp line */}
+        <path
+          d={tempPath}
+          fill="none"
+          stroke="#e8cc6e"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          clipPath="url(#chartClip)"
+        />
+
+        {/* now marker */}
+        {nowIdx >= 0 && (
+          <line
+            x1={tx(nowIdx)} y1={PAD.top}
+            x2={tx(nowIdx)} y2={H - PAD.bottom}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+          />
+        )}
+
+        {/* temp dots every 3h */}
+        {hours.map((h, i) => {
+          if (i % 3 !== 0) return null
+          const x = tx(i)
+          const y = ty(h.temp)
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r="3.5" fill="#1e304e" />
+              <circle cx={x} cy={y} r="2.5" fill="#e8cc6e" opacity="0.95" />
+              <text
+                x={x}
+                y={y - 9}
+                textAnchor="middle"
+                fill="#e8cc6e"
+                fontSize="9"
+                fontFamily="Ubuntu, sans-serif"
+                fontWeight="600"
+              >
+                {h.temp}°
+              </text>
+            </g>
+          )
+        })}
+
+        {/* x-axis time labels */}
+        {hours.map((h, i) => {
+          if (i % 3 !== 0) return null
+          const x = tx(i)
+          const d = new Date(h.time)
+          const hr = d.getHours()
+          const isNow = i === nowIdx
+          const label = isNow ? 'now'
+            : hr === 0 ? 'midnight'
+            : hr === 12 ? 'noon'
+            : hr > 12 ? `${hr - 12}pm`
+            : `${hr}am`
+          return (
+            <text
+              key={i}
+              x={x}
+              y={H - 6}
+              textAnchor="middle"
+              fill={isNow ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)'}
+              fontSize="9"
+              fontFamily="Ubuntu, sans-serif"
+              fontWeight={isNow ? '700' : '400'}
+            >
+              {label}
+            </text>
+          )
+        })}
+
+        {/* y-axis temp labels */}
+        {[minT + 1, Math.round((minT + maxT) / 2), maxT - 1].map((t, i) => (
+          <text
+            key={i}
+            x={PAD.left - 5}
+            y={ty(t) + 3}
+            textAnchor="end"
+            fill="rgba(255,255,255,0.2)"
+            fontSize="8"
+            fontFamily="Ubuntu, sans-serif"
+          >
+            {Math.round(t)}°
+          </text>
+        ))}
+      </svg>
+
+      {/* legend */}
+      <div className={styles.chartLegend}>
+        <div className={styles.legendItem}>
+          <div className={styles.legendLine} style={{ background: '#e8cc6e' }} />
+          Temperature
+        </div>
+        <div className={styles.legendItem}>
+          <div className={styles.legendBar} />
+          Rain probability
+        </div>
+        <div className={styles.legendRight}>
+          {hours.filter((_, i) => i % 3 === 0).map((h, i) => (
+            h.prob > 0 ? (
+              <span
+                key={i}
+                className={`${styles.probLabel} ${h.prob >= 60 ? styles.probHigh : h.prob >= 30 ? styles.probMed : styles.probLow}`}
+              >
+                {h.prob}%
+              </span>
+            ) : null
+          ))}
+        </div>
+      </div>
+
+      {/* icon row */}
+      <div className={styles.iconRow}>
+        {hours.filter((_, i) => i % 3 === 0).map((h, i) => (
+          <div key={i} className={styles.iconCell}>
+            <span className={styles.weatherIcon}>{weatherEmoji(h.code)}</span>
+            {h.mm > 0 && <span className={styles.mmLabel}>{h.mm.toFixed(1)}mm</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── MAIN PAGE ─────────────────────────────────────────────────
 export default function WeatherPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -119,7 +327,7 @@ export default function WeatherPage() {
         const data = await res.json()
         setWeather(data)
         setUpdated(new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }))
-      } catch (e) {
+      } catch {
         setError('Unable to load weather data.')
       } finally {
         setLoading(false)
@@ -148,19 +356,16 @@ export default function WeatherPage() {
   )
 
   const now = new Date()
-  const currentHourIdx = weather.hourly.time.findIndex(t => {
-    const d = new Date(t)
-    return d >= now && isToday(t)
-  })
+  const currentHourIdx = weather.hourly.time.findIndex(t => new Date(t) >= now)
   const startIdx = currentHourIdx >= 0 ? currentHourIdx : 0
 
-  // next 12 hours
-  const next12 = weather.hourly.time
+  // next 24 hours
+  const next24 = weather.hourly.time
     .map((t, i) => ({ t, i }))
     .filter(({ t }) => new Date(t) >= now)
-    .slice(0, 12)
+    .slice(0, 24)
 
-  // today's rain windows — consecutive hours with precip prob >= 30
+  // today's rain windows
   const todayHours = weather.hourly.time
     .map((t, i) => ({ t, i }))
     .filter(({ t }) => isToday(t) && new Date(t) >= now)
@@ -170,7 +375,7 @@ export default function WeatherPage() {
   let windowMaxProb = 0
   let windowMaxMm = 0
 
-  todayHours.forEach(({ t, i }, idx) => {
+  todayHours.forEach(({ t, i }) => {
     const prob = weather.hourly.precipitation_probability[i]
     const mm = weather.hourly.precipitation[i]
     if (prob >= 30) {
@@ -208,7 +413,7 @@ export default function WeatherPage() {
           {/* HEADER */}
           <div className={styles.pageHeader}>
             <div>
-              <div className={styles.location}>📍 Kenthurst, NSW</div>
+              <div className={styles.location}>📍 Kenthurst, New South Wales</div>
               <h1 className={styles.title}>Court Weather</h1>
             </div>
             <div className={styles.updated}>Updated {updated}</div>
@@ -273,30 +478,20 @@ export default function WeatherPage() {
             </div>
           )}
 
-          {/* HOURLY STRIP */}
+          {/* 24H CHART */}
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Next 12 Hours</h2>
+            <h2 className={styles.sectionTitle}>Next 24 Hours</h2>
           </div>
-          <div className={styles.hourlyStrip}>
-            {next12.map(({ t, i }) => {
-              const prob = weather.hourly.precipitation_probability[i]
-              const temp = weather.hourly.temperature_2m[i]
-              const code = weather.hourly.weathercode[i]
-              const mm = weather.hourly.precipitation[i]
-              const isNow = i === startIdx
-              return (
-                <div key={t} className={`${styles.hourCard} ${isNow ? styles.hourCardNow : ''}`}>
-                  <div className={styles.hourTime}>{isNow ? 'Now' : formatHour(t)}</div>
-                  <div className={styles.hourEmoji}>{weatherEmoji(code)}</div>
-                  <div className={styles.hourTemp}>{Math.round(temp)}°</div>
-                  <div className={`${styles.hourProb} ${prob >= 50 ? styles.hourProbHigh : prob >= 20 ? styles.hourProbMed : styles.hourProbLow}`}>
-                    {prob}%
-                  </div>
-                  {mm > 0 && <div className={styles.hourMm}>{mm.toFixed(1)}mm</div>}
-                </div>
-              )
-            })}
-          </div>
+          <HourlyChart
+            hours={next24.map(({ t, i }) => ({
+              time: t,
+              temp: Math.round(weather.hourly.temperature_2m[i]),
+              prob: weather.hourly.precipitation_probability[i],
+              mm: weather.hourly.precipitation[i],
+              code: weather.hourly.weathercode[i],
+              wind: Math.round(weather.hourly.windspeed_10m[i]),
+            }))}
+          />
 
           {/* 7-DAY FORECAST */}
           <div className={styles.sectionHeader} style={{ marginTop: '2rem' }}>
