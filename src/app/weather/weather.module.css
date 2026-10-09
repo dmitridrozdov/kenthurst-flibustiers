@@ -218,69 +218,101 @@
   color: var(--text);
 }
 
-/* HOURLY STRIP */
-.hourlyStrip {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
-}
-
-.hourCard {
+/* ── HOURLY CHART ── */
+.chartContainer {
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 0.6rem;
+  border-radius: 12px;
+  padding: 1rem 0.5rem 0.75rem;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.hourlyChart {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+.chartLegend {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  min-width: 62px;
-  flex-shrink: 0;
-  transition: background 0.15s;
+  gap: 1.25rem;
+  padding: 0.6rem 1rem 0;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
 }
 
-.hourCardNow {
-  border-color: var(--gold);
-  background: rgba(212, 180, 74, 0.08);
-}
-
-.hourTime {
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.hourEmoji {
-  font-size: 1.3rem;
-  line-height: 1;
-}
-
-.hourTemp {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.hourProb {
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.68rem;
+  color: var(--text3);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.legendLine {
+  width: 20px;
+  height: 2.5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendBar {
+  width: 12px;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(74, 130, 184, 0.5);
+  flex-shrink: 0;
+}
+
+.legendRight {
+  margin-left: auto;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.probLabel {
+  font-size: 0.65rem;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 10px;
 }
 
-.hourProbHigh { background: rgba(255,107,74,0.2); color: var(--red); }
-.hourProbMed  { background: rgba(212,180,74,0.18); color: var(--gold2); }
-.hourProbLow  { background: rgba(125,209,110,0.12); color: var(--green-light); }
+.probHigh { background: rgba(255,107,74,0.2); color: var(--red); }
+.probMed  { background: rgba(212,180,74,0.18); color: var(--gold2); }
+.probLow  { background: rgba(125,209,110,0.12); color: var(--green-light); }
 
-.hourMm {
-  font-size: 0.6rem;
-  color: var(--text3);
-  font-weight: 300;
+.iconRow {
+  display: flex;
+  padding: 0.6rem 0.5rem 0;
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+.iconCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.weatherIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.mmLabel {
+  font-size: 0.55rem;
+  color: #4a82b8;
+  font-weight: 500;
 }
 
 /* 7-DAY */
