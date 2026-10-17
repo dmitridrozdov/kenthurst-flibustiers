@@ -68,7 +68,7 @@ if (playersRaw === undefined || matches === undefined) {
 
   const allRatings = calculateRatings(playersRaw, matches)
   const maxGames = Math.max(...allRatings.map((r) => r.gamesPlayed), 0)
-  const threshold = maxGames * 0.3
+  const threshold = maxGames * 0.2
 
   const active = allRatings.filter((r) => r.gamesPlayed >= threshold && r.gamesPlayed > 0)
   const provisional = allRatings.filter((r) => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
