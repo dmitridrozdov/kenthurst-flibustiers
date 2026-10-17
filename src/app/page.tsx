@@ -143,7 +143,7 @@ export default function HomePage() {
 
   const allRatings = calculateRatings(players, matches)
   const maxGames = Math.max(...allRatings.map(r => r.gamesPlayed), 0)
-  const threshold = maxGames * 0.3
+  const threshold = maxGames * 0.2
 
   const ratings = allRatings.filter(r => r.gamesPlayed >= threshold && r.gamesPlayed > 0)
   const provisional = allRatings.filter(r => r.gamesPlayed > 0 && r.gamesPlayed < threshold)
