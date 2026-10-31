@@ -60,31 +60,8 @@ function buildHistory(player: string, matches: Match[]) {
     }
 
     const isDraw = m.score.toLowerCase().includes('draw') || wg === lg
-    const involves = (p: string) => all.includes(p)
-    const isWinner = (p: string) => [m.winner, m.partner1].includes(p)
-
-    if (involves(player)) {
-      const win = isWinner(player)
-      const mult = 1 + Math.min(0.30, recentGames[player] * 0.03)
-      const k = gamesPlayed[player] >= VETERAN_THRESHOLD ? VETERAN_K : BASE_K
-      let pts: number
-
-      if (isDraw) {
-        const teamAAvg = (ratings[m.winner] + ratings[m.partner1]) / 2
-        const teamBAvg = (ratings[m.loser] + ratings[m.partner2]) / 2
-        const midpoint = (teamAAvg + teamBAvg) / 2
-        pts = Math.abs(k * (midpoint - ratings[player]))
-      } else {
-        const total = wg + lg || 1
-        const winPerf = MAX_RATING * Math.pow(wg / total, 1.2)
-        const losePerf = MAX_RATING * Math.pow(lg / total, 1.2)
-        const perf = win ? winPerf : losePerf
-        const actFactor = win ? mult : (1 / mult)
-        pts = Math.abs(k * actFactor * (perf - ratings[player]))
-      }
-
-      history.push({ win: isDraw ? true : win, pts: parseFloat(pts.toFixed(2)) })
-    }
+    const involved = all.includes(player)
+    const before = ratings[player]
 
     // update ratings for all players to keep state correct for future matches
     const total = wg + lg || 1
@@ -122,6 +99,12 @@ function buildHistory(player: string, matches: Match[]) {
         const days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000)
         if (days <= 60) recentGames[p]++
       })
+    }
+
+    // actual rating delta: a narrow win can lower a rating, a close loss can raise it
+    if (involved) {
+      const delta = parseFloat((ratings[player] - before).toFixed(2))
+      history.push({ win: delta >= 0, pts: Math.abs(delta) })
     }
   }
 
