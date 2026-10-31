@@ -84,6 +84,7 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
 
   let streakType: 'W' | 'L' | 'D' | null = null
   let streakCount = 0
+  let bestMargin = 0
 
   for (const m of sorted) {
     const all = [m.winner, m.partner1, m.loser, m.partner2]
@@ -119,8 +120,9 @@ function buildPlayerStats(player: string, matches: Match[]): PlayerStats {
         stats.partners[partner].wins++
         ;[opp1, opp2].forEach(o => stats.opponents[o].wins++)
         const margin = wg - lg
-        if (!stats.bestWin || margin > (stats.bestWin ? parseInt(stats.bestWin.score.split('-')[0]) - parseInt(stats.bestWin.score.split('-')[1]) : 0)) {
+        if (!stats.bestWin || margin > bestMargin) {
           stats.bestWin = { opponent: `${opp1} / ${opp2}`, score: m.score, date: m.date }
+          bestMargin = margin
         }
         if (streakType === 'W') streakCount++
         else { streakType = 'W'; streakCount = 1 }
@@ -208,11 +210,8 @@ function buildPairStats(matches: Match[]) {
     .sort((a, b) => b.total - a.total)
 }
 
-// Use authoritative ratingChange from calculateRatings to avoid replay drift
-function getDayBoxes(
-  ratingHistory: { date: string; rating: number }[],
-  totalDayChange?: number
-): { delta: number }[] {
+// per-match deltas on the player's own latest match day
+function getDayBoxes(ratingHistory: { date: string; rating: number }[]): { delta: number }[] {
   if (ratingHistory.length === 0) return []
 
   const latestDate = ratingHistory[ratingHistory.length - 1].date
@@ -225,11 +224,6 @@ function getDayBoxes(
   for (const h of todayEntries) {
     boxes.push({ delta: parseFloat((h.rating - prev).toFixed(2)) })
     prev = h.rating
-  }
-
-  // when only one match today, use authoritative ratingChange to avoid floating point drift
-  if (boxes.length === 1 && totalDayChange !== undefined) {
-    boxes[0].delta = parseFloat(totalDayChange.toFixed(2))
   }
 
   return boxes.reverse()
@@ -353,7 +347,7 @@ export default function AnalyticsPage() {
               {allRatings.filter(r => r.gamesPlayed > 0).map((r, i) => {
                 const av = avatarColor(r.name)
                 const stats = buildPlayerStats(r.name, matches)
-                const boxes = getDayBoxes(stats.ratingHistory, r.ratingChange)
+                const boxes = getDayBoxes(stats.ratingHistory)
                 return (
                   <button key={r.name} className={styles.playerCard} onClick={() => setSelected(r.name)}>
                     <div className={styles.playerCardTop}>
@@ -432,7 +426,7 @@ export default function AnalyticsPage() {
                   dayChange={selectedRating?.ratingChange ?? 0}
                   uid={`detail_${selected}`}
                 />
-                <DayBoxes boxes={getDayBoxes(selectedStats.ratingHistory, selectedRating?.ratingChange)} />
+                <DayBoxes boxes={getDayBoxes(selectedStats.ratingHistory)} />
               </div>
 
               {/* Key stats */}
