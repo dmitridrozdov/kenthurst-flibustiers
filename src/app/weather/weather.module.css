@@ -62,6 +62,9 @@
 /* CURRENT */
 .currentCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.75rem;
@@ -221,6 +224,9 @@
 /* ── HOURLY CHART ── */
 .chartContainer {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem 0.5rem 0.75rem;
@@ -324,6 +330,9 @@
 
 .dayRow {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.9rem 1.25rem;
@@ -450,6 +459,9 @@
 .tabs {
   display: flex;
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px;
@@ -486,6 +498,9 @@
 
 .radarCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -593,6 +608,9 @@
 
 .radarLegend {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem 1.25rem;
@@ -633,6 +651,9 @@
 
 .radarInfoCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.9rem 1rem;

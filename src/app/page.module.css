@@ -22,10 +22,10 @@
     ),
     repeating-linear-gradient(
       170deg,
-      rgba(14, 30, 60, 0.95),
-      rgba(10, 22, 48, 0.95) 18px,
-      rgba(12, 26, 54, 0.95) 18px,
-      rgba(12, 26, 54, 0.95) 36px
+      rgba(14, 30, 60, 0.28),
+      rgba(10, 22, 48, 0.28) 18px,
+      rgba(12, 26, 54, 0.28) 18px,
+      rgba(12, 26, 54, 0.28) 36px
     );
 }
 .court {
@@ -136,6 +136,9 @@
 /* PANEL */
 .panel {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -274,6 +277,9 @@
 /* EXPLAINER */
 .explainer {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border2);
   border-radius: 8px;
   padding: 1.5rem 1.75rem;

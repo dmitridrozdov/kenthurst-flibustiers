@@ -13,6 +13,9 @@
 
 .card {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.25rem;
@@ -99,6 +102,9 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--green-light);
   border-radius: 8px;
   padding: 0.85rem 1.5rem;

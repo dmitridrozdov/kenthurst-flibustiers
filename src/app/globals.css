@@ -1,8 +1,12 @@
 :root {
   --bg: #0f1a2e;
-  --bg2: #132038;
-  --bg3: #182842;
-  --bg4: #1e304e;
+  /* glass surfaces over the night sky */
+  --bg2: rgba(20, 34, 62, 0.42);
+  --bg3: rgba(30, 48, 84, 0.5);
+  --bg4: rgba(44, 66, 108, 0.55);
+  --bg-solid: rgba(12, 20, 40, 0.92);
+  --glass-blur: blur(14px) saturate(140%);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --gold: #d4b44a;
   --gold2: #e8cc6e;
   --gold3: #f5e0a0;
@@ -10,8 +14,8 @@
   --text: #e8eef8;
   --text2: #8aa0be;
   --text3: #506880;
-  --border: #1e3050;
-  --border2: #264060;
+  --border: rgba(140, 170, 230, 0.14);
+  --border2: rgba(160, 190, 240, 0.22);
   --red: #ff6b4a;
 }
 
@@ -26,7 +30,7 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background: #03060f;
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -44,4 +48,9 @@ button {
 input,
 select {
   font-family: inherit;
+}
+
+option {
+  background: #0f1a2e;
+  color: var(--text);
 }

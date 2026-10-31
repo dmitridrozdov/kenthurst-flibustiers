@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Ubuntu } from 'next/font/google'
 import './globals.css'
 import ConvexClientProvider from './ConvexClientProvider'
+import StarSky from '@/components/StarSky'
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={ubuntu.className}>
+        <StarSky />
         <ConvexClientProvider>{children}</ConvexClientProvider>
       </body>
     </html>

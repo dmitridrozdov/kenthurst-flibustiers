@@ -31,6 +31,9 @@
 .tabs {
   display: flex;
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px;
@@ -68,6 +71,9 @@
 
 .playerCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.25rem;
@@ -237,6 +243,9 @@
 
 .detailCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.25rem;
@@ -383,6 +392,9 @@
 
 .pairCard {
   background: var(--bg2);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.25rem;
