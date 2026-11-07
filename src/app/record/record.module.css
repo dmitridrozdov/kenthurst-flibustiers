@@ -25,6 +25,13 @@
   margin-bottom: 1.25rem;
 }
 
+/* backdrop-filter makes each card its own stacking context, so the player
+   menus can only overlap the next card if this whole card sits above it. */
+.matchCard {
+  position: relative;
+  z-index: 1;
+}
+
 .label {
   font-size: 0.7rem;
   text-transform: uppercase;

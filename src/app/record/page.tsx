@@ -83,7 +83,7 @@ if (playersRaw === undefined || matches === undefined) {
         <div className={styles.section}>
           <h1 className={styles.title}>Record a Match</h1>
 
-          <div className={styles.card}>
+          <div className={`${styles.card} ${styles.matchCard}`}>
             <label className={styles.label}>Date</label>
             <input
               type="date"
