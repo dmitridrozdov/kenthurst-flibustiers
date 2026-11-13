@@ -234,10 +234,35 @@
   overflow: hidden;
 }
 
+.chartScroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  padding-bottom: 0.25rem;
+}
+
+.chartScroll::-webkit-scrollbar { height: 4px; }
+.chartScroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.chartInner {
+  min-width: 100%;
+}
+
 .hourlyChart {
   width: 100%;
   height: 160px;
   display: block;
+}
+
+@media (max-width: 900px) {
+  /* keep the chart at its natural 900px width so labels aren't squished; scroll horizontally */
+  .chartInner { width: 900px; }
 }
 
 .chartLegend {

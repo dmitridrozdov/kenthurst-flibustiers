@@ -130,6 +130,8 @@ function HourlyChart({ hours }: {
 
   return (
     <div className={styles.chartContainer}>
+      <div className={styles.chartScroll}>
+      <div className={styles.chartInner}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className={styles.hourlyChart}
@@ -268,6 +270,18 @@ function HourlyChart({ hours }: {
         ))}
       </svg>
 
+      {/* icon row */}
+      <div className={styles.iconRow}>
+        {hours.filter((_, i) => i % 3 === 0).map((h, i) => (
+          <div key={i} className={styles.iconCell}>
+            <span className={styles.weatherIcon}>{weatherEmoji(h.code)}</span>
+            {h.mm > 0 && <span className={styles.mmLabel}>{h.mm.toFixed(1)}mm</span>}
+          </div>
+        ))}
+      </div>
+      </div>
+      </div>
+
       {/* legend */}
       <div className={styles.chartLegend}>
         <div className={styles.legendItem}>
@@ -292,15 +306,6 @@ function HourlyChart({ hours }: {
         </div>
       </div>
 
-      {/* icon row */}
-      <div className={styles.iconRow}>
-        {hours.filter((_, i) => i % 3 === 0).map((h, i) => (
-          <div key={i} className={styles.iconCell}>
-            <span className={styles.weatherIcon}>{weatherEmoji(h.code)}</span>
-            {h.mm > 0 && <span className={styles.mmLabel}>{h.mm.toFixed(1)}mm</span>}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
